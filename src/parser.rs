@@ -130,6 +130,9 @@ pub enum AstNode {
         header: NodeId,
         rows: Vec<NodeId>,
     },
+    Record {
+        pairs: Vec<(NodeId, NodeId)>,
+    },
     MemberAccess {
         target: NodeId,
         field: NodeId,
