@@ -516,12 +516,12 @@ impl Parser {
                 token_type: TokenType::Name,
                 span_start,
                 span_end,
-            }) if &self.compiler.source[span_start..span_end] == b"none" => {
+            }) if &self.compiler.source[span_start..span_end] == b"null" => {
                 self.next();
 
                 self.create_node(AstNode::Null, span_start, span_end)
             }
-            _ => self.error("expected: none"),
+            _ => self.error("expected: null"),
         }
     }
 
