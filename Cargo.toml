@@ -10,3 +10,6 @@ edition = "2021"
 [lib]
 name = "new_nu_parser"
 path = "src/lib.rs"
+
+[dev-dependencies]
+insta = { version = "1.33.0", features = ["glob"] }

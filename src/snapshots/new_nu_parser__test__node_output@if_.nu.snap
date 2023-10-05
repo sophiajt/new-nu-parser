@@ -1,0 +1,19 @@
+---
+source: src/test.rs
+expression: "evaluate_example(path, &contents)"
+input_file: tests/if_.nu
+---
+0: Variable (4 to 5)
+1: Int (8 to 11)
+2: Let { variable_name: NodeId(0), ty: None, initializer: NodeId(1), is_mutable: false } (0 to 11)
+3: Variable (16 to 18)
+4: LessThan (19 to 20)
+5: Int (21 to 24)
+6: BinaryOp { lhs: NodeId(3), op: NodeId(4), rhs: NodeId(5) } (16 to 24)
+7: Int (31 to 32)
+8: Block(BlockId(0)) (25 to 34)
+9: Int (46 to 47)
+10: Block(BlockId(1)) (40 to 49)
+11: If { condition: NodeId(6), then_block: NodeId(8), else_expression: Some(NodeId(10)) } (13 to 49)
+12: Block(BlockId(2)) (0 to 0)
+

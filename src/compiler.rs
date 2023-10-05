@@ -67,6 +67,19 @@ impl Compiler {
         }
     }
 
+    pub fn display_state(&self) -> String {
+        self.ast_nodes
+            .iter()
+            .enumerate()
+            .map(|(idx, ast_node)| {
+                format!(
+                    "{}: {:?} ({} to {})\n",
+                    idx, ast_node, self.span_start[idx], self.span_end[idx]
+                )
+            })
+            .collect()
+    }
+
     pub fn add_file(&mut self, fname: &str, contents: &[u8]) {
         let span_offset = self.source.len();
 
