@@ -14,3 +14,10 @@ fn evaluate_example(fname: &Path) -> String {
 
     compiler.display_state()
 }
+
+#[test]
+fn test_node_output() {
+    insta::glob!("../tests", "*.nu", |path| {
+        insta::assert_snapshot!(evaluate_example(path));
+    });
+}
