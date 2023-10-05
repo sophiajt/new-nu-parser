@@ -26,6 +26,16 @@ impl Block {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum BlockContext {
+    /// This block is a whole block of code not wrapped in curlies
+    Bare,
+    /// This block is wrapped in curlies
+    Curlies,
+    /// This block should be parsed as part of a closure
+    Closure,
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum AstNode {
     Int,
@@ -260,7 +270,7 @@ impl Parser {
     }
 
     pub fn parse(mut self) -> Compiler {
-        self.block(false);
+        self.block(BlockContext::Bare);
 
         self.compiler
     }
@@ -389,7 +399,7 @@ impl Parser {
         let span_start = self.position();
 
         let mut expr = if self.is_lcurly() {
-            self.block(true)
+            self.block(BlockContext::Curlies)
         } else if self.is_lparen() {
             self.lparen();
             let output = self.expression();
@@ -796,7 +806,7 @@ impl Parser {
         while self.is_newline() {
             self.next();
         }
-        let then_block = self.block(true);
+        let then_block = self.block(BlockContext::Curlies);
 
         while self.is_newline() {
             self.next();
@@ -1013,18 +1023,21 @@ impl Parser {
         }
     }
 
-    pub fn block(&mut self, expect_curly_braces: bool) -> NodeId {
+    pub fn block(&mut self, context: BlockContext) -> NodeId {
         let span_start = self.position();
         let mut span_end = self.position();
 
         let mut code_body = vec![];
-        if expect_curly_braces {
+        if let BlockContext::Curlies = context {
             self.lcurly();
         }
 
         while self.has_tokens() {
-            if self.is_rcurly() && expect_curly_braces {
+            if self.is_rcurly() && context == BlockContext::Curlies {
                 self.rcurly();
+                break;
+            } else if self.is_rcurly() && context == BlockContext::Closure {
+                // not responsible for parsing it, yield back to the closure pass
                 break;
             } else if self.is_semicolon() || self.is_newline() {
                 self.next();
@@ -1073,7 +1086,7 @@ impl Parser {
         self.keyword(b"while");
 
         let condition = self.expression();
-        let block = self.block(true);
+        let block = self.block(BlockContext::Curlies);
         let span_end = self.get_span_end(block);
 
         self.create_node(AstNode::While { condition, block }, span_start, span_end)
@@ -1087,7 +1100,7 @@ impl Parser {
         self.keyword(b"in");
 
         let range = self.simple_expression();
-        let block = self.block(true);
+        let block = self.block(BlockContext::Curlies);
         let span_end = self.get_span_end(block);
 
         self.create_node(
