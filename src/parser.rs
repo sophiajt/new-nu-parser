@@ -642,16 +642,22 @@ impl Parser {
             self.rcurly();
             span_end = self.position();
 
-            return self.create_node(AstNode::Closure { params: args, block}, span_start, span_end);
+            return self.create_node(
+                AstNode::Closure {
+                    params: args,
+                    block,
+                },
+                span_start,
+                span_end,
+            );
         }
 
         loop {
-            
             if self.is_rcurly() {
                 self.rcurly();
                 span_end = self.position();
                 break;
-            } 
+            }
             self.skip_space();
             let key = if self.is_name() {
                 self.name()
@@ -662,7 +668,7 @@ impl Parser {
             self.skip_space();
             let val = self.simple_expression();
             items.push((key, val));
-            
+
             if self.is_comma() {
                 self.comma()
             }
@@ -670,12 +676,18 @@ impl Parser {
                 // TODO abort when appropriate
                 break;
             }
-
         }
 
         // TODO: figure out how to recover back to a closure without arguments
         if is_closure {
-            self.create_node(AstNode::Closure { params: args, block}, span_start, span_end)
+            self.create_node(
+                AstNode::Closure {
+                    params: args,
+                    block,
+                },
+                span_start,
+                span_end,
+            )
         } else {
             self.create_node(AstNode::Record { pairs: items }, span_start, span_end)
         }
@@ -898,7 +910,7 @@ impl Parser {
     }
 
     // directly ripped from `type_params` just changed delimiters
-    // FIXME: simplify if appropriate 
+    // FIXME: simplify if appropriate
     pub fn closure_params(&mut self) -> NodeId {
         let span_start = self.position();
         let span_end;

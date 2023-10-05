@@ -66,9 +66,12 @@ impl Compiler {
             );
         }
         if !self.errors.is_empty() {
-            println! ("==== ERRORS ====");
+            println!("==== ERRORS ====");
             for error in &self.errors {
-                println!("{:?} (NodeId {}): {}", error.severity, error.node_id.0, error.message);
+                println!(
+                    "{:?} (NodeId {}): {}",
+                    error.severity, error.node_id.0, error.message
+                );
             }
         }
     }
