@@ -65,6 +65,12 @@ impl Compiler {
                 idx, ast_node, self.span_start[idx], self.span_end[idx]
             );
         }
+        if !self.errors.is_empty() {
+            println! ("==== ERRORS ====");
+            for error in &self.errors {
+                println!("{:?} (NodeId {}): {}", error.severity, error.node_id.0, error.message);
+            }
+        }
     }
 
     pub fn display_state(&self) -> String {
