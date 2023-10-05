@@ -1,11 +1,7 @@
 use std::process::exit;
 
-use compiler::Compiler;
-use parser::Parser;
-
-mod compiler;
-mod errors;
-mod parser;
+use new_nu_parser::compiler::Compiler;
+use new_nu_parser::parser::Parser;
 
 fn main() {
     let mut compiler = Compiler::new();
