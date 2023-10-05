@@ -101,11 +101,10 @@ pub enum AstNode {
         ty: NodeId,
         is_mutable: bool,
     },
-
-    // Closure {
-    //     params: NodeId,
-    //     block: NodeId,
-    // },
+    Closure {
+        params: Option<NodeId>,
+        block: NodeId,
+    },
 
     // Expressions
     Call {
@@ -140,10 +139,6 @@ pub enum AstNode {
     MethodCall {
         target: NodeId,
         call: NodeId,
-    },
-    Closure {
-        params: Vec<NodeId>,
-        block: NodeId,
     },
     Block(BlockId),
     If {
