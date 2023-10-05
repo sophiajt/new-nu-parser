@@ -1572,6 +1572,20 @@ impl Parser {
         }
     }
 
+    pub fn pipe(&mut self) {
+        match self.peek() {
+            Some(Token {
+                token_type: TokenType::Pipe,
+                ..
+            }) => {
+                self.next();
+            }
+            _ => {
+                self.error("expected: pipe symbol '|'");
+            }
+        }
+    }
+
     pub fn less_than(&mut self) {
         match self.peek() {
             Some(Token {
