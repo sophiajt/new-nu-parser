@@ -588,6 +588,7 @@ impl Parser {
                 self.next();
                 break;
             } else if self.is_comma() || self.is_newline() {
+                // TODO: should we disallow `[,,,]`?
                 self.next();
             } else if self.is_semicolon() {
                 if items.len() != 1 {
