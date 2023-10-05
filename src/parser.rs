@@ -399,7 +399,7 @@ impl Parser {
         let span_start = self.position();
 
         let mut expr = if self.is_lcurly() {
-            self.block(BlockContext::Curlies)
+            self.record_or_closure()
         } else if self.is_lparen() {
             self.lparen();
             let output = self.expression();
@@ -620,6 +620,66 @@ impl Parser {
         }
     }
 
+    pub fn record_or_closure(&mut self) -> NodeId {
+        let span_start = self.position();
+        let mut span_end = self.position(); // TODO: make sure we only initialize it expectedly
+
+        let mut is_closure = false;
+        // For the record
+        let mut items = vec![];
+        // For the closure
+        let mut args = None; // Closure args are optional
+        let mut block = NodeId(0); // TODO make sure it gets assigned a correct value
+
+        self.lcurly();
+
+        // Explicit closure case
+        if self.is_pipe() {
+            is_closure = true;
+            args = Some(self.closure_params());
+            // TODO figure out a separate block parser that doesn't eat the last rcurly
+            block = self.block(BlockContext::Closure);
+            self.rcurly();
+            span_end = self.position();
+
+            return self.create_node(AstNode::Closure { params: args, block}, span_start, span_end);
+        }
+
+        loop {
+            
+            if self.is_rcurly() {
+                self.rcurly();
+                span_end = self.position();
+                break;
+            } 
+            self.skip_space();
+            let key = if self.is_name() {
+                self.name()
+            } else {
+                self.string()
+            };
+            self.colon();
+            self.skip_space();
+            let val = self.simple_expression();
+            items.push((key, val));
+            
+            if self.is_comma() {
+                self.comma()
+            }
+            if self.next().is_none() {
+                // TODO abort when appropriate
+                break;
+            }
+
+        }
+
+        // TODO: figure out how to recover back to a closure without arguments
+        if is_closure {
+            self.create_node(AstNode::Closure { params: args, block}, span_start, span_end)
+        } else {
+            self.create_node(AstNode::Record { pairs: items }, span_start, span_end)
+        }
+    }
 
     pub fn operator(&mut self) -> NodeId {
         match self.peek() {
