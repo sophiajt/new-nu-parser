@@ -141,6 +141,10 @@ pub enum AstNode {
         target: NodeId,
         call: NodeId,
     },
+    Closure {
+        params: Vec<NodeId>,
+        block: NodeId,
+    },
     Block(BlockId),
     If {
         condition: NodeId,
