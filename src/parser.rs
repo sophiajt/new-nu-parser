@@ -609,6 +609,7 @@ impl Parser {
         }
     }
 
+
     pub fn operator(&mut self) -> NodeId {
         match self.peek() {
             Some(Token {
@@ -823,6 +824,38 @@ impl Parser {
             span_start,
             span_end,
         )
+    }
+
+    // directly ripped from `type_params` just changed delimiters
+    // FIXME: simplify if appropriate 
+    pub fn closure_params(&mut self) -> NodeId {
+        let span_start = self.position();
+        let span_end;
+        let param_list = {
+            self.pipe();
+
+            let mut output = vec![];
+
+            while self.has_tokens() {
+                if self.is_pipe() {
+                    break;
+                }
+
+                if self.is_comma() {
+                    self.next();
+                    continue;
+                }
+
+                output.push(self.name());
+            }
+
+            span_end = self.position() + 1;
+            self.pipe();
+
+            output
+        };
+
+        self.create_node(AstNode::Params(param_list), span_start, span_end)
     }
 
     pub fn type_params(&mut self) -> NodeId {
