@@ -1,6 +1,6 @@
 ---
 source: src/test.rs
-expression: "evaluate_example(path, &contents)"
+expression: evaluate_example(path)
 input_file: tests/if_.nu
 ---
 0: Variable (4 to 5)
@@ -11,9 +11,9 @@ input_file: tests/if_.nu
 5: Int (21 to 24)
 6: BinaryOp { lhs: NodeId(3), op: NodeId(4), rhs: NodeId(5) } (16 to 24)
 7: Int (31 to 32)
-8: Block(BlockId(0)) (25 to 34)
+8: Block(BlockId(0)) (25 to 35)
 9: Int (46 to 47)
 10: Block(BlockId(1)) (40 to 49)
 11: If { condition: NodeId(6), then_block: NodeId(8), else_expression: Some(NodeId(10)) } (13 to 49)
-12: Block(BlockId(2)) (0 to 0)
+12: Block(BlockId(2)) (0 to 49)
 

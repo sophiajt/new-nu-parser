@@ -1024,7 +1024,6 @@ impl Parser {
 
         while self.has_tokens() {
             if self.is_rcurly() && expect_curly_braces {
-                span_end = self.position() + 1;
                 self.rcurly();
                 break;
             } else if self.is_semicolon() || self.is_newline() {
@@ -1060,6 +1059,7 @@ impl Parser {
         }
 
         self.compiler.blocks.push(Block::new(code_body));
+        span_end = self.position();
 
         self.create_node(
             AstNode::Block(BlockId(self.compiler.blocks.len() - 1)),

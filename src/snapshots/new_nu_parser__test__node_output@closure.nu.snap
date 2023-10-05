@@ -13,5 +13,5 @@ input_file: tests/closure.nu
 7: Variable (14 to 16)
 8: BinaryOp { lhs: NodeId(5), op: NodeId(6), rhs: NodeId(7) } (9 to 16)
 9: Block(BlockId(0)) (0 to 17)
-10: Block(BlockId(1)) (0 to 0)
+10: Block(BlockId(1)) (0 to 18)
 

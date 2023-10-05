@@ -1,6 +1,6 @@
 ---
 source: src/test.rs
-expression: "evaluate_example(path, &contents)"
+expression: evaluate_example(path)
 input_file: tests/table2.nu
 ---
 0: Name (7 to 8)
@@ -13,5 +13,5 @@ input_file: tests/table2.nu
 7: Int (34 to 35)
 8: List([NodeId(6), NodeId(7)]) (30 to 35)
 9: Table { header: NodeId(2), rows: [NodeId(5), NodeId(8)] } (0 to 37)
-10: Block(BlockId(0)) (0 to 0)
+10: Block(BlockId(0)) (0 to 38)
 
