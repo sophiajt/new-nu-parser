@@ -609,7 +609,7 @@ impl Parser {
             let header = items.remove(0);
             self.create_node(
                 AstNode::Table {
-                    header: header,
+                    header,
                     rows: items,
                 },
                 span_start,
@@ -624,7 +624,7 @@ impl Parser {
         let span_start = self.position();
         let mut span_end = self.position(); // TODO: make sure we only initialize it expectedly
 
-        let mut is_closure = false;
+        let is_closure = false;
         // For the record
         let mut items = vec![];
         // For the closure
@@ -635,7 +635,6 @@ impl Parser {
 
         // Explicit closure case
         if self.is_pipe() {
-            is_closure = true;
             args = Some(self.closure_params());
             // TODO figure out a separate block parser that doesn't eat the last rcurly
             block = self.block(BlockContext::Closure);
@@ -1098,7 +1097,6 @@ impl Parser {
 
     pub fn block(&mut self, context: BlockContext) -> NodeId {
         let span_start = self.position();
-        let mut span_end = self.position();
 
         let mut code_body = vec![];
         if let BlockContext::Curlies = context {
@@ -1126,17 +1124,17 @@ impl Parser {
             } else if self.is_keyword(b"return") {
                 code_body.push(self.return_statement());
             } else {
-                let span_start = self.position();
+                let exp_span_start = self.position();
                 let expression = self.expression_or_assignment();
-                let span_end = self.get_span_end(expression);
+                let exp_span_end = self.get_span_end(expression);
 
                 if self.is_semicolon() {
                     // This is a statement, not an expression
                     self.next();
                     code_body.push(self.create_node(
                         AstNode::Statement(expression),
-                        span_start,
-                        span_end,
+                        exp_span_start,
+                        exp_span_end,
                     ))
                 } else {
                     code_body.push(expression);
@@ -1145,7 +1143,7 @@ impl Parser {
         }
 
         self.compiler.blocks.push(Block::new(code_body));
-        span_end = self.position();
+        let span_end = self.position();
 
         self.create_node(
             AstNode::Block(BlockId(self.compiler.blocks.len() - 1)),
