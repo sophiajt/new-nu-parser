@@ -14,6 +14,6 @@ input_file: tests/if_.nu
 8: Block(BlockId(0)) (25 to 35)
 9: Int (46 to 47)
 10: Block(BlockId(1)) (40 to 49)
-11: If { condition: NodeId(6), then_block: NodeId(8), else_expression: Some(NodeId(10)) } (13 to 49)
+11: If { condition: NodeId(6), then_block: NodeId(8), else_block: Some(NodeId(10)) } (13 to 49)
 12: Block(BlockId(2)) (0 to 49)
 

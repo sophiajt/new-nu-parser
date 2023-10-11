@@ -154,7 +154,7 @@ pub enum AstNode {
     If {
         condition: NodeId,
         then_block: NodeId,
-        else_expression: Option<NodeId>,
+        else_block: Option<NodeId>,
     },
     Match {
         target: NodeId,
@@ -884,14 +884,14 @@ impl Parser {
             self.next();
         }
 
-        let else_expression = if self.is_keyword(b"else") {
+        let else_block = if self.is_keyword(b"else") {
             self.next();
             while self.is_newline() {
                 self.next();
             }
-            let expr = self.expression();
-            span_end = self.get_span_end(expr);
-            Some(expr)
+            let block = self.block(BlockContext::Curlies);
+            span_end = self.get_span_end(block);
+            Some(block)
         } else {
             span_end = self.get_span_end(then_block);
             None
@@ -901,7 +901,7 @@ impl Parser {
             AstNode::If {
                 condition,
                 then_block,
-                else_expression,
+                else_block,
             },
             span_start,
             span_end,
