@@ -412,7 +412,9 @@ impl Parser {
         };
 
         loop {
-            if self.is_dotdot() {
+            if self.is_horizontal_space() {
+                return expr;
+            } else if self.is_dotdot() {
                 // Range
                 self.next();
 
@@ -1745,6 +1747,13 @@ impl Parser {
             span_start,
             span_end: self.span_offset,
         })
+    }
+
+    pub fn is_horizontal_space(&self) -> bool {
+        let span_position = self.span_offset;
+        let whitespace: &[u8] = &[b' ', b'\t'];
+
+        span_position < self.compiler.source.len() && whitespace.contains(&self.compiler.source[span_position])
     }
 
     pub fn skip_space(&mut self) {
