@@ -1430,7 +1430,7 @@ impl Parser {
                 token_type: TokenType::Name,
                 span_start,
                 span_end,
-            }) if &self.compiler.source[span_start..span_end] == b"new" => true,
+            }) if &self.compiler.source[span_start..span_end] == b"null" => true,
             Some(Token {
                 token_type: TokenType::Name,
                 ..
