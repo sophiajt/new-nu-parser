@@ -5,12 +5,8 @@ input_file: tests/record.nu
 ---
 0: Name (1 to 2)
 1: Int (4 to 5)
-2: Garbage (8 to 9)
-3: Garbage (10 to 11)
-4: Garbage (11 to 12)
-5: Garbage (13 to 13)
-6: Garbage (13 to 13)
-7: Garbage (13 to 13)
-8: Record { pairs: [(NodeId(0), NodeId(1)), (NodeId(2), NodeId(4)), (NodeId(5), NodeId(7))] } (0 to 0)
-9: Block(BlockId(0)) (0 to 13)
+2: Name (7 to 8)
+3: Int (10 to 11)
+4: Record { pairs: [(NodeId(0), NodeId(1)), (NodeId(2), NodeId(3))] } (0 to 12)
+5: Block(BlockId(0)) (0 to 13)
 

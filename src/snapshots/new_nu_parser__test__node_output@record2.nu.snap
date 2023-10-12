@@ -5,12 +5,8 @@ input_file: tests/record2.nu
 ---
 0: String (1 to 4)
 1: Int (6 to 7)
-2: Garbage (12 to 13)
-3: Garbage (14 to 15)
-4: Garbage (15 to 16)
-5: Garbage (17 to 17)
-6: Garbage (17 to 17)
-7: Garbage (17 to 17)
-8: Record { pairs: [(NodeId(0), NodeId(1)), (NodeId(2), NodeId(4)), (NodeId(5), NodeId(7))] } (0 to 0)
-9: Block(BlockId(0)) (0 to 17)
+2: String (9 to 12)
+3: Int (14 to 15)
+4: Record { pairs: [(NodeId(0), NodeId(1)), (NodeId(2), NodeId(3))] } (0 to 16)
+5: Block(BlockId(0)) (0 to 17)
 

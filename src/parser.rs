@@ -670,7 +670,7 @@ impl Parser {
             if self.is_comma() {
                 self.comma()
             }
-            if self.next().is_none() {
+            if self.peek().is_none() {
                 // TODO abort when appropriate
                 break;
             }
