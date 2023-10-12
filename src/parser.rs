@@ -636,7 +636,6 @@ impl Parser {
         // Explicit closure case
         if self.is_pipe() {
             args = Some(self.closure_params());
-            // TODO figure out a separate block parser that doesn't eat the last rcurly
             block = self.block(BlockContext::Closure);
             self.rcurly();
             span_end = self.position();
