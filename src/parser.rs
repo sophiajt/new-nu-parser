@@ -418,13 +418,27 @@ impl Parser {
                 // Range
                 self.next();
 
-                let rhs = self.simple_expression();
-                let span_end = self.get_span_end(rhs);
+                if self.is_horizontal_space() {
+                    // TODO: implement range from
+                    //
+                    // TODO: tweak the garbage location.
+                    self.error("incomplete range");
+                    return expr;
+                } else {
+                    let rhs = self.simple_expression();
+                    let span_end = self.get_span_end(rhs);
 
-                expr = self.create_node(AstNode::Range { lhs: expr, rhs }, span_start, span_end);
+                    expr =
+                        self.create_node(AstNode::Range { lhs: expr, rhs }, span_start, span_end);
+                }
             } else if self.is_dot() {
                 // Member access
                 self.next();
+
+                if self.is_horizontal_space() {
+                    self.error("missing path name");
+                    return expr;
+                }
 
                 let prev_offset = self.span_offset;
 
@@ -1753,7 +1767,8 @@ impl Parser {
         let span_position = self.span_offset;
         let whitespace: &[u8] = &[b' ', b'\t'];
 
-        span_position < self.compiler.source.len() && whitespace.contains(&self.compiler.source[span_position])
+        span_position < self.compiler.source.len()
+            && whitespace.contains(&self.compiler.source[span_position])
     }
 
     pub fn skip_space(&mut self) {
