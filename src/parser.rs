@@ -656,14 +656,8 @@ impl Parser {
                 span_end = self.position();
                 break;
             }
-            self.skip_space();
-            let key = if self.is_name() {
-                self.name()
-            } else {
-                self.string()
-            };
+            let key = self.simple_expression();
             self.colon();
-            self.skip_space();
             let val = self.simple_expression();
             items.push((key, val));
 
