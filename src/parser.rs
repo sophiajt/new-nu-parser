@@ -1,5 +1,5 @@
 use crate::{
-    compiler::Compiler,
+    compiler::{Compiler, RollbackPoint},
     errors::{Severity, SourceError},
 };
 
@@ -2308,6 +2308,14 @@ impl Parser {
                 return self.lex_name();
             }
         }
+    }
+
+    fn get_rollback_point(&self) -> RollbackPoint {
+        self.compiler.get_rollback_point(self.span_offset)
+    }
+
+    fn apply_rollback(&mut self, rbp: RollbackPoint) {
+        self.span_offset = self.compiler.apply_compiler_rollback(rbp)
     }
 }
 

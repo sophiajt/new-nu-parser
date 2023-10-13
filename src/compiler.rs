@@ -3,6 +3,14 @@ use crate::{
     parser::{AstNode, Block, NodeId},
 };
 
+pub struct RollbackPoint {
+    idx_span_start: usize,
+    idx_nodes: usize,
+    idx_errors: usize,
+    idx_blocks: usize,
+    span_offset: usize,
+}
+
 #[derive(Debug)]
 pub struct Compiler {
     // Core information, indexed by NodeId
@@ -114,5 +122,26 @@ impl Compiler {
         self.ast_nodes.push(ast_node);
 
         NodeId(self.ast_nodes.len() - 1)
+    }
+
+    pub fn get_rollback_point(&self, span_offset: usize) -> RollbackPoint {
+        assert_eq!(self.span_start.len(), self.span_end.len());
+        RollbackPoint {
+            idx_span_start: self.span_start.len(),
+            idx_nodes: self.ast_nodes.len(),
+            idx_errors: self.errors.len(),
+            idx_blocks: self.blocks.len(),
+            span_offset,
+        }
+    }
+
+    pub fn apply_compiler_rollback(&mut self, rbp: RollbackPoint) -> usize {
+        self.blocks.truncate(rbp.idx_blocks);
+        self.ast_nodes.truncate(rbp.idx_nodes);
+        self.errors.truncate(rbp.idx_errors);
+        self.span_start.truncate(rbp.idx_span_start);
+        self.span_end.truncate(rbp.idx_span_start);
+
+        rbp.span_offset
     }
 }
