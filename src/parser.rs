@@ -624,20 +624,17 @@ impl Parser {
         let span_start = self.position();
         let mut span_end = self.position(); // TODO: make sure we only initialize it expectedly
 
-        let is_closure = false;
+        let mut is_closure = false;
         // For the record
         let mut items = vec![];
-        // For the closure
-        let mut args = None; // Closure args are optional
-        let mut block = NodeId(0); // TODO make sure it gets assigned a correct value
 
         self.lcurly();
         self.skip_space_and_newlines();
 
         // Explicit closure case
         if self.is_pipe() {
-            args = Some(self.closure_params());
-            block = self.block(BlockContext::Closure);
+            let args = Some(self.closure_params());
+            let block = self.block(BlockContext::Closure);
             self.rcurly();
             span_end = self.position();
 
@@ -651,6 +648,7 @@ impl Parser {
             );
         }
 
+        let rollback_point = self.get_rollback_point();
         loop {
             self.skip_space_and_newlines();
             if self.is_rcurly() {
@@ -660,6 +658,10 @@ impl Parser {
             }
             let key = self.simple_expression();
             self.skip_space_and_newlines();
+            if !self.is_colon() {
+                is_closure = true;                
+                break;
+            }
             self.colon();
             self.skip_space_and_newlines();
             let val = self.simple_expression();
@@ -674,11 +676,16 @@ impl Parser {
             }
         }
 
-        // TODO: figure out how to recover back to a closure without arguments
         if is_closure {
+            self.apply_rollback(rollback_point);
+            let block = self.block(BlockContext::Closure);
+            self.rcurly();
+
+            span_end = self.position();
+
             self.create_node(
                 AstNode::Closure {
-                    params: args,
+                    params: None,
                     block,
                 },
                 span_start,
