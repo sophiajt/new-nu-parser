@@ -1885,6 +1885,13 @@ impl Parser {
         self.span_offset = span_position;
     }
 
+    pub fn skip_space_and_newlines(&mut self) {
+        self.skip_space();
+        while let Some(..) = self.newline() {
+            self.skip_space();
+        }
+    }
+
     pub fn newline(&mut self) -> Option<Token> {
         let mut span_position = self.span_offset;
         let whitespace: &[u8] = &[b'\r', b'\n'];
