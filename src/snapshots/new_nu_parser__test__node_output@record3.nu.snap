@@ -3,17 +3,10 @@ source: src/test.rs
 expression: evaluate_example(path)
 input_file: tests/record3.nu
 ---
-0: Garbage (1 to 2)
-1: Garbage (2 to 3)
-2: Garbage (3 to 4)
-3: Int (5 to 6)
-4: Garbage (6 to 7)
-5: Garbage (8 to 9)
-6: Name (9 to 10)
-7: Int (12 to 13)
-8: Garbage (14 to 15)
-9: Garbage (15 to 16)
-10: Garbage (16 to 17)
-11: Record { pairs: [(NodeId(0), NodeId(2)), (NodeId(3), NodeId(5)), (NodeId(6), NodeId(7)), (NodeId(8), NodeId(10))] } (0 to 0)
-12: Block(BlockId(0)) (0 to 17)
+0: Name (2 to 3)
+1: Int (5 to 6)
+2: Name (9 to 10)
+3: Int (12 to 13)
+4: Record { pairs: [(NodeId(0), NodeId(1)), (NodeId(2), NodeId(3))] } (0 to 16)
+5: Block(BlockId(0)) (0 to 17)
 

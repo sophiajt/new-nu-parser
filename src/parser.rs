@@ -632,6 +632,7 @@ impl Parser {
         let mut block = NodeId(0); // TODO make sure it gets assigned a correct value
 
         self.lcurly();
+        self.skip_space_and_newlines();
 
         // Explicit closure case
         if self.is_pipe() {
@@ -651,13 +652,16 @@ impl Parser {
         }
 
         loop {
+            self.skip_space_and_newlines();
             if self.is_rcurly() {
                 self.rcurly();
                 span_end = self.position();
                 break;
             }
             let key = self.simple_expression();
+            self.skip_space_and_newlines();
             self.colon();
+            self.skip_space_and_newlines();
             let val = self.simple_expression();
             items.push((key, val));
 
@@ -665,7 +669,7 @@ impl Parser {
                 self.comma()
             }
             if self.peek().is_none() {
-                // TODO abort when appropriate
+                // abort when appropriate
                 break;
             }
         }
