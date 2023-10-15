@@ -625,6 +625,7 @@ impl Parser {
         let mut span_end = self.position(); // TODO: make sure we only initialize it expectedly
 
         let mut is_closure = false;
+        let mut first_pass = true;
         // For the record
         let mut items = vec![];
 
@@ -658,7 +659,7 @@ impl Parser {
             }
             let key = self.simple_expression();
             self.skip_space_and_newlines();
-            if !self.is_colon() {
+            if first_pass && !self.is_colon() {
                 is_closure = true;
                 break;
             }
@@ -666,6 +667,7 @@ impl Parser {
             self.skip_space_and_newlines();
             let val = self.simple_expression();
             items.push((key, val));
+            first_pass = false;
 
             if self.is_comma() {
                 self.comma()
