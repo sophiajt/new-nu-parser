@@ -659,7 +659,7 @@ impl Parser {
             let key = self.simple_expression();
             self.skip_space_and_newlines();
             if !self.is_colon() {
-                is_closure = true;                
+                is_closure = true;
                 break;
             }
             self.colon();
@@ -893,7 +893,13 @@ impl Parser {
             while self.is_newline() {
                 self.next();
             }
-            let block = self.block(BlockContext::Curlies);
+            let block = if self.is_keyword(b"if") {
+                self.if_expression()
+            } else if self.is_keyword(b"match") {
+                self.match_expression()
+            } else {
+                self.block(BlockContext::Curlies)
+            };
             span_end = self.get_span_end(block);
             Some(block)
         } else {
