@@ -1,5 +1,5 @@
 use crate::{
-    compiler::Compiler,
+    compiler::{Compiler, RollbackPoint},
     errors::{Severity, SourceError},
 };
 
@@ -24,6 +24,16 @@ impl Block {
     pub fn new(nodes: Vec<NodeId>) -> Block {
         Block { nodes }
     }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum BlockContext {
+    /// This block is a whole block of code not wrapped in curlies
+    Bare,
+    /// This block is wrapped in curlies
+    Curlies,
+    /// This block should be parsed as part of a closure
+    Closure,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -101,11 +111,10 @@ pub enum AstNode {
         ty: NodeId,
         is_mutable: bool,
     },
-
-    // Closure {
-    //     params: NodeId,
-    //     block: NodeId,
-    // },
+    Closure {
+        params: Option<NodeId>,
+        block: NodeId,
+    },
 
     // Expressions
     Call {
@@ -130,6 +139,9 @@ pub enum AstNode {
         header: NodeId,
         rows: Vec<NodeId>,
     },
+    Record {
+        pairs: Vec<(NodeId, NodeId)>,
+    },
     MemberAccess {
         target: NodeId,
         field: NodeId,
@@ -142,7 +154,7 @@ pub enum AstNode {
     If {
         condition: NodeId,
         then_block: NodeId,
-        else_expression: Option<NodeId>,
+        else_block: Option<NodeId>,
     },
     Match {
         target: NodeId,
@@ -258,7 +270,7 @@ impl Parser {
     }
 
     pub fn parse(mut self) -> Compiler {
-        self.block(false);
+        self.block(BlockContext::Bare);
 
         self.compiler
     }
@@ -387,7 +399,7 @@ impl Parser {
         let span_start = self.position();
 
         let mut expr = if self.is_lcurly() {
-            self.block(true)
+            self.record_or_closure()
         } else if self.is_lparen() {
             self.lparen();
             let output = self.expression();
@@ -576,6 +588,7 @@ impl Parser {
                 self.next();
                 break;
             } else if self.is_comma() || self.is_newline() {
+                // TODO: should we disallow `[,,,]`?
                 self.next();
             } else if self.is_semicolon() {
                 if items.len() != 1 {
@@ -596,7 +609,7 @@ impl Parser {
             let header = items.remove(0);
             self.create_node(
                 AstNode::Table {
-                    header: header,
+                    header,
                     rows: items,
                 },
                 span_start,
@@ -604,6 +617,84 @@ impl Parser {
             )
         } else {
             self.create_node(AstNode::List(items), span_start, span_end)
+        }
+    }
+
+    pub fn record_or_closure(&mut self) -> NodeId {
+        let span_start = self.position();
+        let mut span_end = self.position(); // TODO: make sure we only initialize it expectedly
+
+        let mut is_closure = false;
+        let mut first_pass = true;
+        // For the record
+        let mut items = vec![];
+
+        self.lcurly();
+        self.skip_space_and_newlines();
+
+        // Explicit closure case
+        if self.is_pipe() {
+            let args = Some(self.closure_params());
+            let block = self.block(BlockContext::Closure);
+            self.rcurly();
+            span_end = self.position();
+
+            return self.create_node(
+                AstNode::Closure {
+                    params: args,
+                    block,
+                },
+                span_start,
+                span_end,
+            );
+        }
+
+        let rollback_point = self.get_rollback_point();
+        loop {
+            self.skip_space_and_newlines();
+            if self.is_rcurly() {
+                self.rcurly();
+                span_end = self.position();
+                break;
+            }
+            let key = self.simple_expression();
+            self.skip_space_and_newlines();
+            if first_pass && !self.is_colon() {
+                is_closure = true;
+                break;
+            }
+            self.colon();
+            self.skip_space_and_newlines();
+            let val = self.simple_expression();
+            items.push((key, val));
+            first_pass = false;
+
+            if self.is_comma() {
+                self.comma()
+            }
+            if self.peek().is_none() {
+                // abort when appropriate
+                break;
+            }
+        }
+
+        if is_closure {
+            self.apply_rollback(rollback_point);
+            let block = self.block(BlockContext::Closure);
+            self.rcurly();
+
+            span_end = self.position();
+
+            self.create_node(
+                AstNode::Closure {
+                    params: None,
+                    block,
+                },
+                span_start,
+                span_end,
+            )
+        } else {
+            self.create_node(AstNode::Record { pairs: items }, span_start, span_end)
         }
     }
 
@@ -793,20 +884,26 @@ impl Parser {
         while self.is_newline() {
             self.next();
         }
-        let then_block = self.block(true);
+        let then_block = self.block(BlockContext::Curlies);
 
         while self.is_newline() {
             self.next();
         }
 
-        let else_expression = if self.is_keyword(b"else") {
+        let else_block = if self.is_keyword(b"else") {
             self.next();
             while self.is_newline() {
                 self.next();
             }
-            let expr = self.expression();
-            span_end = self.get_span_end(expr);
-            Some(expr)
+            let block = if self.is_keyword(b"if") {
+                self.if_expression()
+            } else if self.is_keyword(b"match") {
+                self.match_expression()
+            } else {
+                self.block(BlockContext::Curlies)
+            };
+            span_end = self.get_span_end(block);
+            Some(block)
         } else {
             span_end = self.get_span_end(then_block);
             None
@@ -816,11 +913,43 @@ impl Parser {
             AstNode::If {
                 condition,
                 then_block,
-                else_expression,
+                else_block,
             },
             span_start,
             span_end,
         )
+    }
+
+    // directly ripped from `type_params` just changed delimiters
+    // FIXME: simplify if appropriate
+    pub fn closure_params(&mut self) -> NodeId {
+        let span_start = self.position();
+        let span_end;
+        let param_list = {
+            self.pipe();
+
+            let mut output = vec![];
+
+            while self.has_tokens() {
+                if self.is_pipe() {
+                    break;
+                }
+
+                if self.is_comma() {
+                    self.next();
+                    continue;
+                }
+
+                output.push(self.name());
+            }
+
+            span_end = self.position() + 1;
+            self.pipe();
+
+            output
+        };
+
+        self.create_node(AstNode::Params(param_list), span_start, span_end)
     }
 
     pub fn type_params(&mut self) -> NodeId {
@@ -978,19 +1107,20 @@ impl Parser {
         }
     }
 
-    pub fn block(&mut self, expect_curly_braces: bool) -> NodeId {
+    pub fn block(&mut self, context: BlockContext) -> NodeId {
         let span_start = self.position();
-        let mut span_end = self.position();
 
         let mut code_body = vec![];
-        if expect_curly_braces {
+        if let BlockContext::Curlies = context {
             self.lcurly();
         }
 
         while self.has_tokens() {
-            if self.is_rcurly() && expect_curly_braces {
-                span_end = self.position() + 1;
+            if self.is_rcurly() && context == BlockContext::Curlies {
                 self.rcurly();
+                break;
+            } else if self.is_rcurly() && context == BlockContext::Closure {
+                // not responsible for parsing it, yield back to the closure pass
                 break;
             } else if self.is_semicolon() || self.is_newline() {
                 self.next();
@@ -1006,17 +1136,17 @@ impl Parser {
             } else if self.is_keyword(b"return") {
                 code_body.push(self.return_statement());
             } else {
-                let span_start = self.position();
+                let exp_span_start = self.position();
                 let expression = self.expression_or_assignment();
-                let span_end = self.get_span_end(expression);
+                let exp_span_end = self.get_span_end(expression);
 
                 if self.is_semicolon() {
                     // This is a statement, not an expression
                     self.next();
                     code_body.push(self.create_node(
                         AstNode::Statement(expression),
-                        span_start,
-                        span_end,
+                        exp_span_start,
+                        exp_span_end,
                     ))
                 } else {
                     code_body.push(expression);
@@ -1025,6 +1155,7 @@ impl Parser {
         }
 
         self.compiler.blocks.push(Block::new(code_body));
+        let span_end = self.position();
 
         self.create_node(
             AstNode::Block(BlockId(self.compiler.blocks.len() - 1)),
@@ -1038,7 +1169,7 @@ impl Parser {
         self.keyword(b"while");
 
         let condition = self.expression();
-        let block = self.block(true);
+        let block = self.block(BlockContext::Curlies);
         let span_end = self.get_span_end(block);
 
         self.create_node(AstNode::While { condition, block }, span_start, span_end)
@@ -1052,7 +1183,7 @@ impl Parser {
         self.keyword(b"in");
 
         let range = self.simple_expression();
-        let block = self.block(true);
+        let block = self.block(BlockContext::Curlies);
         let span_end = self.get_span_end(block);
 
         self.create_node(
@@ -1565,6 +1696,20 @@ impl Parser {
         }
     }
 
+    pub fn pipe(&mut self) {
+        match self.peek() {
+            Some(Token {
+                token_type: TokenType::Pipe,
+                ..
+            }) => {
+                self.next();
+            }
+            _ => {
+                self.error("expected: pipe symbol '|'");
+            }
+        }
+    }
+
     pub fn less_than(&mut self) {
         match self.peek() {
             Some(Token {
@@ -1757,6 +1902,13 @@ impl Parser {
             span_position += 1;
         }
         self.span_offset = span_position;
+    }
+
+    pub fn skip_space_and_newlines(&mut self) {
+        self.skip_space();
+        while let Some(..) = self.newline() {
+            self.skip_space();
+        }
     }
 
     pub fn newline(&mut self) -> Option<Token> {
@@ -2171,6 +2323,14 @@ impl Parser {
                 return self.lex_name();
             }
         }
+    }
+
+    fn get_rollback_point(&self) -> RollbackPoint {
+        self.compiler.get_rollback_point(self.span_offset)
+    }
+
+    fn apply_rollback(&mut self, rbp: RollbackPoint) {
+        self.span_offset = self.compiler.apply_compiler_rollback(rbp)
     }
 }
 

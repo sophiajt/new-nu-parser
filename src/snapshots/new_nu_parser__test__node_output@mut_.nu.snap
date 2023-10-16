@@ -1,6 +1,6 @@
 ---
 source: src/test.rs
-expression: "evaluate_example(path, &contents)"
+expression: evaluate_example(path)
 input_file: tests/mut_.nu
 ---
 0: Variable (4 to 5)
@@ -15,5 +15,5 @@ input_file: tests/mut_.nu
 9: Int (27 to 30)
 10: BinaryOp { lhs: NodeId(7), op: NodeId(8), rhs: NodeId(9) } (23 to 30)
 11: BinaryOp { lhs: NodeId(5), op: NodeId(6), rhs: NodeId(10) } (18 to 30)
-12: Block(BlockId(0)) (0 to 0)
+12: Block(BlockId(0)) (0 to 30)
 

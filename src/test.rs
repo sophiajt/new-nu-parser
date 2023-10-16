@@ -1,5 +1,5 @@
-use std::path::Path;
 use crate::{compiler::Compiler, parser::Parser};
+use std::path::Path;
 
 fn evaluate_example(fname: &Path) -> String {
     let mut compiler = Compiler::new();
