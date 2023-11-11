@@ -6,5 +6,5 @@ input_file: tests/invalid_range.nu
 0: Int (0 to 1)
 1: Garbage (2 to 4)
 2: Int (5 to 6)
-3: Block(BlockId(0)) (0 to 0)
+3: Block(BlockId(0)) (0 to 7)
 
