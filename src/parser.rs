@@ -1195,7 +1195,7 @@ impl Parser {
         let span_start = self.position();
         self.keyword(b"for");
 
-        let variable = self.variable();
+        let variable = self.variable_decl();
         self.keyword(b"in");
 
         let range = self.simple_expression();
