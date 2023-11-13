@@ -96,7 +96,12 @@ pub enum AstNode {
         range: NodeId,
         block: NodeId,
     },
+    Loop {
+        block: NodeId,
+    },
     Return(Option<NodeId>),
+    Break,
+    Continue,
 
     // Definitions
     Def {
@@ -1149,8 +1154,14 @@ impl Parser {
                 code_body.push(self.while_statement());
             } else if self.is_keyword(b"for") {
                 code_body.push(self.for_statement());
+            } else if self.is_keyword(b"loop") {
+                code_body.push(self.loop_statement());
             } else if self.is_keyword(b"return") {
                 code_body.push(self.return_statement());
+            } else if self.is_keyword(b"continue") {
+                code_body.push(self.continue_statement());
+            } else if self.is_keyword(b"break") {
+                code_body.push(self.break_statement());
             } else {
                 let exp_span_start = self.position();
                 let expression = self.expression_or_assignment();
@@ -1195,7 +1206,7 @@ impl Parser {
         let span_start = self.position();
         self.keyword(b"for");
 
-        let variable = self.variable();
+        let variable = self.variable_decl();
         self.keyword(b"in");
 
         let range = self.simple_expression();
@@ -1211,6 +1222,15 @@ impl Parser {
             span_start,
             span_end,
         )
+    }
+
+    pub fn loop_statement(&mut self) -> NodeId {
+        let span_start = self.position();
+        self.keyword(b"loop");
+        let block = self.block(BlockContext::Curlies);
+        let span_end = self.get_span_end(block);
+
+        self.create_node(AstNode::Loop { block }, span_start, span_end)
     }
 
     pub fn return_statement(&mut self) -> NodeId {
@@ -1229,6 +1249,22 @@ impl Parser {
         };
 
         self.create_node(AstNode::Return(ret_val), span_start, span_end)
+    }
+
+    pub fn continue_statement(&mut self) -> NodeId {
+        let span_start = self.position();
+        self.keyword(b"continue");
+        let span_end = span_start + b"continue".len();
+
+        self.create_node(AstNode::Continue, span_start, span_end)
+    }
+
+    pub fn break_statement(&mut self) -> NodeId {
+        let span_start = self.position();
+        self.keyword(b"break");
+        let span_end = span_start + b"break".len();
+
+        self.create_node(AstNode::Break, span_start, span_end)
     }
 
     pub fn is_operator(&mut self) -> bool {
