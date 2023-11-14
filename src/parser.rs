@@ -1,5 +1,5 @@
 use crate::{
-    compiler::{Compiler, RollbackPoint},
+    compiler::{Compiler, RollbackPoint, Span},
     errors::{Severity, SourceError},
 };
 
@@ -271,7 +271,7 @@ impl Parser {
     }
 
     fn get_span_end(&self, node_id: NodeId) -> usize {
-        self.compiler.span_end[node_id.0]
+        self.compiler.spans[node_id.0].end
     }
 
     pub fn parse(mut self) -> Compiler {
@@ -815,8 +815,8 @@ impl Parser {
 
     pub fn spanning(&mut self, from: NodeId, to: NodeId) -> (usize, usize) {
         (
-            self.compiler.span_start[from.0],
-            self.compiler.span_end[to.0],
+            self.compiler.spans[from.0].start,
+            self.compiler.spans[to.0].end,
         )
     }
 
@@ -1659,8 +1659,10 @@ impl Parser {
     }
 
     pub fn create_node(&mut self, ast_node: AstNode, span_start: usize, span_end: usize) -> NodeId {
-        self.compiler.span_start.push(span_start);
-        self.compiler.span_end.push(span_end);
+        self.compiler.spans.push(Span {
+            start: span_start,
+            end: span_end,
+        });
         self.compiler.push_node(ast_node)
     }
 
