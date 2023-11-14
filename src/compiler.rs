@@ -12,10 +12,15 @@ pub struct RollbackPoint {
 }
 
 #[derive(Debug)]
+pub struct Span {
+    pub start: usize,
+    pub end: usize,
+}
+
+#[derive(Debug)]
 pub struct Compiler {
     // Core information, indexed by NodeId
-    pub span_start: Vec<usize>,
-    pub span_end: Vec<usize>,
+    pub spans: Vec<Span>,
     ast_nodes: Vec<AstNode>,
     // node_types: Vec<TypeId>,
     // node_lifetimes: Vec<AllocationLifetime>,
@@ -51,8 +56,7 @@ impl Default for Compiler {
 impl Compiler {
     pub fn new() -> Self {
         Self {
-            span_start: vec![],
-            span_end: vec![],
+            spans: vec![],
             ast_nodes: vec![],
             // node_types: vec![],
             blocks: vec![],
@@ -76,7 +80,7 @@ impl Compiler {
         for (idx, ast_node) in self.ast_nodes.iter().enumerate() {
             println!(
                 "{}: {:?} ({} to {})",
-                idx, ast_node, self.span_start[idx], self.span_end[idx]
+                idx, ast_node, self.spans[idx].start, self.spans[idx].end
             );
         }
         if !self.errors.is_empty() {
@@ -98,7 +102,7 @@ impl Compiler {
             .map(|(idx, ast_node)| {
                 format!(
                     "{}: {:?} ({} to {})\n",
-                    idx, ast_node, self.span_start[idx], self.span_end[idx]
+                    idx, ast_node, self.spans[idx].start, self.spans[idx].end
                 )
             })
             .collect()
@@ -132,9 +136,8 @@ impl Compiler {
     }
 
     pub fn get_rollback_point(&self, span_offset: usize) -> RollbackPoint {
-        assert_eq!(self.span_start.len(), self.span_end.len());
         RollbackPoint {
-            idx_span_start: self.span_start.len(),
+            idx_span_start: self.spans.len(),
             idx_nodes: self.ast_nodes.len(),
             idx_errors: self.errors.len(),
             idx_blocks: self.blocks.len(),
@@ -146,8 +149,7 @@ impl Compiler {
         self.blocks.truncate(rbp.idx_blocks);
         self.ast_nodes.truncate(rbp.idx_nodes);
         self.errors.truncate(rbp.idx_errors);
-        self.span_start.truncate(rbp.idx_span_start);
-        self.span_end.truncate(rbp.idx_span_start);
+        self.spans.truncate(rbp.idx_span_start);
 
         rbp.span_offset
     }
