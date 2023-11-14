@@ -10,7 +10,7 @@ input_file: tests/loop.nu
 4: GreaterThan (27 to 28)
 5: Int (29 to 31)
 6: BinaryOp { lhs: NodeId(3), op: NodeId(4), rhs: NodeId(5) } (24 to 31)
-7: Name (42 to 47)
+7: Break (42 to 47)
 8: Block(BlockId(0)) (32 to 53)
 9: If { condition: NodeId(6), then_block: NodeId(8), else_block: None } (21 to 53)
 10: Variable (59 to 61)
