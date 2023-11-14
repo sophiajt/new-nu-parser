@@ -1966,7 +1966,7 @@ impl Parser {
 
     pub fn skip_space_and_newlines(&mut self) {
         self.skip_space();
-        while let Some(..) = self.newline() {
+        while self.newline().is_some() {
             self.skip_space();
         }
     }
@@ -1982,7 +1982,7 @@ impl Parser {
         }
 
         if self.span_offset == span_position {
-            return None;
+            None
         } else {
             let output = Some(Token {
                 token_type: TokenType::Newline,
@@ -1990,7 +1990,7 @@ impl Parser {
                 span_end: span_position,
             });
             self.span_offset = span_position;
-            return output;
+            output
         }
     }
 
@@ -2358,6 +2358,7 @@ impl Parser {
         output
     }
 
+    #[allow(clippy::should_implement_trait)]
     pub fn next(&mut self) -> Option<Token> {
         loop {
             if self.span_offset >= self.compiler.source.len() {

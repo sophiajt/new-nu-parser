@@ -42,6 +42,12 @@ pub struct Compiler {
     pub errors: Vec<SourceError>,
 }
 
+impl Default for Compiler {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Compiler {
     pub fn new() -> Self {
         Self {
@@ -84,6 +90,7 @@ impl Compiler {
         }
     }
 
+    #[allow(clippy::format_collect)]
     pub fn display_state(&self) -> String {
         self.ast_nodes
             .iter()
