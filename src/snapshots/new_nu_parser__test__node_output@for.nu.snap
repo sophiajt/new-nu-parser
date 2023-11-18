@@ -20,7 +20,7 @@ input_file: tests/for.nu
 14: BinaryOp { lhs: NodeId(8), op: NodeId(9), rhs: NodeId(13) } (33 to 45)
 15: Block(BlockId(0)) (27 to 47)
 16: For { variable: NodeId(3), range: NodeId(7), block: NodeId(15) } (10 to 47)
-17: Variable (53 to 55)
+17: Variable (54 to 55)
 18: Int (60 to 61)
 19: Int (62 to 63)
 20: Int (64 to 65)

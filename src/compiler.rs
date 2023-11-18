@@ -2,6 +2,7 @@ use crate::{
     errors::SourceError,
     parser::{AstNode, Block, NodeId},
 };
+use std::collections::HashMap;
 
 pub struct RollbackPoint {
     idx_span_start: usize,
@@ -11,10 +12,47 @@ pub struct RollbackPoint {
     span_offset: usize,
 }
 
+#[derive(Debug, PartialEq)]
+pub enum FrameType {
+    /// Default scope frame marking the scope of a block/closure
+    Scope,
+
+    /// Immutable frame brought in by an overlay
+    Overlay,
+
+    /// Mutable frame inserted after activating an overlay to prevent mutating the overlay frame
+    Light,
+}
+
 #[derive(Debug)]
+pub struct Frame {
+    frame_type: FrameType,
+    pub vars: HashMap<Vec<u8>, NodeId>, // name -> var
+}
+
+impl Frame {
+    pub fn new(frame_type: FrameType) -> Self {
+        Frame {
+            frame_type,
+            vars: HashMap::new(),
+        }
+    }
+
+    pub fn find_variable(&self, name: &[u8]) -> Option<&NodeId> {
+        self.vars.get(name)
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
 pub struct Span {
     pub start: usize,
     pub end: usize,
+}
+
+impl Span {
+    pub fn new(start: usize, end: usize) -> Self {
+        Span { start, end }
+    }
 }
 
 #[derive(Debug)]
@@ -45,6 +83,8 @@ pub struct Compiler {
     // pub var_resolution: HashMap<NodeId, VarId>,
     // pub type_resolution: HashMap<NodeId, TypeId>,
     pub errors: Vec<SourceError>,
+
+    scope: Vec<Frame>,
 }
 
 impl Default for Compiler {
@@ -73,6 +113,7 @@ impl Compiler {
             // var_resolution: HashMap::new(),
             // type_resolution: HashMap::new(),
             errors: vec![],
+            scope: vec![Frame::new(FrameType::Scope)],
         }
     }
 
@@ -152,5 +193,87 @@ impl Compiler {
         self.spans.truncate(rbp.idx_span_start);
 
         rbp.span_offset
+    }
+
+    /// Enter a scope, e.g., a block or a closure
+    pub fn enter_scope(&mut self) {
+        self.scope.push(Frame {
+            frame_type: FrameType::Scope,
+            vars: HashMap::new(),
+        });
+    }
+
+    /// Exit a scope, e.g., when reaching the end of a block or a closure
+    ///
+    /// When exiting a scope, all overlays (and corresponding light scope frames) are removed along
+    /// with the removed scope.
+    pub fn exit_scope(&mut self) {
+        match self
+            .scope
+            .iter()
+            .rposition(|frame| frame.frame_type == FrameType::Scope)
+        {
+            None => panic!("no scope frame to exit"),
+            Some(0) => panic!("can't exit the top-most scope frame"),
+            Some(pos) => self.scope.truncate(pos),
+        }
+    }
+
+    /// Get a span of a node
+    pub fn get_span(&self, node_id: NodeId) -> Span {
+        *self.spans.get(node_id.0).expect("node doesn't have span")
+    }
+
+    /// Get the source contents under the span
+    pub fn get_span_contents(&self, span: Span) -> &[u8] {
+        self.source
+            .get(span.start..span.end)
+            .expect("tried getting invalid span contents")
+    }
+
+    /// Fetch last scope frame that can be written to
+    pub fn last_frame_mut(&mut self) -> &mut Frame {
+        for frame in self.scope.iter_mut().rev() {
+            if frame.frame_type == FrameType::Scope || frame.frame_type == FrameType::Light {
+                return frame;
+            }
+        }
+
+        panic!("No valid scope frame");
+    }
+
+    pub fn add_variable(&mut self, name: Vec<u8>, var_id: NodeId) {
+        self.last_frame_mut().vars.insert(name, var_id);
+    }
+
+    pub fn find_variable(&self, name: &[u8]) -> Option<NodeId> {
+        for frame in self.scope.iter().rev() {
+            if let Some(var_id) = frame.vars.get(name) {
+                return Some(*var_id);
+            }
+        }
+
+        None
+    }
+
+    pub fn get_variable(&self, var_id: NodeId) -> &AstNode {
+        self.ast_nodes
+            .get(var_id.0)
+            .expect("tried getting invalid variable AST node")
+    }
+
+    /// Flatten the scope frames into only one frame
+    /// (experiment)
+    pub fn flatten_scope(&self) -> Frame {
+        let mut vars = HashMap::new();
+
+        for frame in &self.scope {
+            vars.extend(frame.vars.clone());
+        }
+
+        Frame {
+            frame_type: FrameType::Scope,
+            vars,
+        }
     }
 }

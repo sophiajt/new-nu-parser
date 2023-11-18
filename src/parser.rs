@@ -575,24 +575,25 @@ impl Parser {
 
     pub fn variable_decl(&mut self) -> NodeId {
         if self.is_dollar() {
-            let span_start = self.position();
-
             self.next();
-            let name = self
-                .next()
-                .expect("internal error: missing token that was expected to be there");
-            let name_end = name.span_end;
-            self.create_node(AstNode::Variable, span_start, name_end)
-        } else if self.is_name() {
-            let name = self
-                .next()
-                .expect("internal error: missing token that was expected to be there");
-            let name_start = name.span_start;
-            let name_end = name.span_end;
-            self.create_node(AstNode::Variable, name_start, name_end)
+        };
+
+        let name = if self.is_name() {
+            self.next()
+                .expect("internal error: missing token that was expected to be there")
         } else {
-            self.error("expected variable")
-        }
+            return self.error("expected variable");
+        };
+
+        let var_name = self
+            .compiler
+            .get_span_contents(Span::new(name.span_start, name.span_end))
+            .to_vec();
+
+        let var_node = self.create_node(AstNode::Variable, name.span_start, name.span_end);
+        self.compiler.add_variable(var_name, var_node);
+
+        var_node
     }
 
     pub fn list_or_table(&mut self) -> NodeId {
@@ -1136,6 +1137,10 @@ impl Parser {
             self.lcurly();
         }
 
+        if context == BlockContext::Closure || context == BlockContext::Curlies {
+            self.compiler.enter_scope();
+        }
+
         while self.has_tokens() {
             if self.is_rcurly() && context == BlockContext::Curlies {
                 self.rcurly();
@@ -1179,6 +1184,10 @@ impl Parser {
                     code_body.push(expression);
                 }
             }
+        }
+
+        if context == BlockContext::Closure || context == BlockContext::Curlies {
+            self.compiler.exit_scope();
         }
 
         self.compiler.blocks.push(Block::new(code_body));
