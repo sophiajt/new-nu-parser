@@ -47,7 +47,7 @@ pub enum AstNode {
         params: Option<NodeId>,
         optional: bool,
     },
-    Variable,
+    Variable, // TODO: Add VarId pointing at array of proper variable structs
 
     // Booleans
     True,
@@ -567,7 +567,19 @@ impl Parser {
                 .next()
                 .expect("internal error: missing token that was expected to be there");
             let name_end = name.span_end;
-            self.create_node(AstNode::Variable, span_start, name_end)
+
+            if self
+                .compiler
+                .find_variable(
+                    self.compiler
+                        .get_span_contents(Span::new(name.span_start, name.span_end)),
+                )
+                .is_some()
+            {
+                self.create_node(AstNode::Variable, span_start, name_end)
+            } else {
+                self.error("variable not found")
+            }
         } else {
             self.error("expected variable")
         }
@@ -962,7 +974,13 @@ impl Parser {
                     continue;
                 }
 
-                output.push(self.name());
+                let var_name_id = self.name();
+                let var_name_span = self.compiler.get_span(var_name_id);
+                let var_name = self.compiler.get_span_contents(var_name_span).to_vec();
+
+                self.compiler.add_variable(var_name, var_name_id);
+
+                output.push(var_name_id);
             }
 
             span_end = self.position() + 1;
