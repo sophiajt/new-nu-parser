@@ -261,19 +261,4 @@ impl Compiler {
             .get(var_id.0)
             .expect("tried getting invalid variable AST node")
     }
-
-    /// Flatten the scope frames into only one frame
-    /// (experiment)
-    pub fn flatten_scope(&self) -> Frame {
-        let mut vars = HashMap::new();
-
-        for frame in &self.scope {
-            vars.extend(frame.vars.clone());
-        }
-
-        Frame {
-            frame_type: FrameType::Scope,
-            vars,
-        }
-    }
 }
