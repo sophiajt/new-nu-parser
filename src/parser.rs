@@ -568,18 +568,20 @@ impl Parser {
                 .expect("internal error: missing token that was expected to be there");
             let name_end = name.span_end;
 
+            let var_node_id = self.create_node(AstNode::Variable, span_start, name_end);
+
             if self
                 .compiler
                 .find_variable(
                     self.compiler
                         .get_span_contents(Span::new(name.span_start, name.span_end)),
                 )
-                .is_some()
+                .is_none()
             {
-                self.create_node(AstNode::Variable, span_start, name_end)
-            } else {
-                self.error("variable not found")
+                self.error_on_node("variable not found", var_node_id);
             }
+
+            var_node_id
         } else {
             self.error("expected variable")
         }
