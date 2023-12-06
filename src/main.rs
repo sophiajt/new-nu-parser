@@ -20,6 +20,7 @@ fn main() {
         let parser = Parser::new(compiler, span_offset);
 
         compiler = parser.parse();
+        compiler.resolve();
     }
 
     compiler.print();
