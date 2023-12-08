@@ -16,4 +16,11 @@ input_file: tests/reparse.nu
 10: Name (33 to 36)
 11: Int (37 to 38)
 12: Block(BlockId(1)) (0 to 38)
+==== ERRORS ====
+Error (NodeId 3): expected list item
+Error (NodeId 7): variable not found
+==== SCOPE ====
+0: Frame Scope, variables: [  ], node_id: NodeId(12)
+1: Frame Scope, variables: [  ], node_id: NodeId(12)
+2: Frame Scope, variables: [  ], node_id: NodeId(8)
 

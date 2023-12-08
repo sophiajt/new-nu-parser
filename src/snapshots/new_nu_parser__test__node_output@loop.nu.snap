@@ -20,4 +20,7 @@ input_file: tests/loop.nu
 14: Block(BlockId(1)) (15 to 68)
 15: Loop { block: NodeId(14) } (10 to 68)
 16: Block(BlockId(2)) (0 to 68)
+==== SCOPE ====
+0: Frame Scope, variables: [  ], node_id: NodeId(16)
+1: Frame Scope, variables: [ x: NodeId(0) ], node_id: NodeId(16)
 

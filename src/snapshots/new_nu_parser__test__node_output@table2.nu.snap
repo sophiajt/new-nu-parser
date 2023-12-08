@@ -14,4 +14,7 @@ input_file: tests/table2.nu
 8: List([NodeId(6), NodeId(7)]) (30 to 35)
 9: Table { header: NodeId(2), rows: [NodeId(5), NodeId(8)] } (0 to 37)
 10: Block(BlockId(0)) (0 to 38)
+==== SCOPE ====
+0: Frame Scope, variables: [  ], node_id: NodeId(10)
+1: Frame Scope, variables: [  ], node_id: NodeId(10)
 

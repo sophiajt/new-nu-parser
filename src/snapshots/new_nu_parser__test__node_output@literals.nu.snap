@@ -10,4 +10,7 @@ input_file: tests/literals.nu
 4: String (17 to 22)
 5: List([NodeId(0), NodeId(1), NodeId(2), NodeId(3), NodeId(4)]) (0 to 22)
 6: Block(BlockId(0)) (0 to 24)
+==== SCOPE ====
+0: Frame Scope, variables: [  ], node_id: NodeId(6)
+1: Frame Scope, variables: [  ], node_id: NodeId(6)
 

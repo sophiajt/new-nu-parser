@@ -7,4 +7,9 @@ input_file: tests/invalid_range.nu
 1: Garbage (2 to 4)
 2: Int (5 to 6)
 3: Block(BlockId(0)) (0 to 7)
+==== ERRORS ====
+Error (NodeId 1): incomplete expression
+==== SCOPE ====
+0: Frame Scope, variables: [  ], node_id: NodeId(3)
+1: Frame Scope, variables: [  ], node_id: NodeId(3)
 

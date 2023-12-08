@@ -132,26 +132,8 @@ impl Compiler {
     }
 
     pub fn print(&self) {
-        for (idx, ast_node) in self.ast_nodes.iter().enumerate() {
-            println!(
-                "{}: {:?} ({} to {})",
-                idx, ast_node, self.spans[idx].start, self.spans[idx].end
-            );
-        }
-        if !self.errors.is_empty() {
-            println!("==== ERRORS ====");
-            for error in &self.errors {
-                println!(
-                    "{:?} (NodeId {}): {}",
-                    error.severity, error.node_id.0, error.message
-                );
-            }
-        }
-
-        println!("==== SCOPE ====");
-        for (i, scope) in self.scope.iter().enumerate() {
-            println!("{i}: {scope:?}");
-        }
+        let output = self.display_state();
+        print!("{output}");
     }
 
     #[allow(clippy::format_collect)]
@@ -180,7 +162,21 @@ impl Compiler {
 
         result.push_str("==== SCOPE ====\n");
         for (i, scope) in self.scope.iter().enumerate() {
-            result.push_str(&format!("{i}: {scope:?}\n"));
+            let mut vars: Vec<String> = scope
+                .variables
+                .iter()
+                .map(|(name, id)| format!("{0}: {id:?}", String::from_utf8_lossy(name)))
+                .collect();
+
+            vars.sort();
+
+            let line = format!(
+                "{i}: Frame {0:?}, variables: [ {1} ], node_id: {2:?}\n",
+                scope.frame_type,
+                vars.join(", "),
+                scope.node_id
+            );
+            result.push_str(&line);
         }
 
         result

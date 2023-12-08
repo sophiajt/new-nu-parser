@@ -10,4 +10,8 @@ input_file: tests/closure2.nu
 4: Block(BlockId(0)) (4 to 12)
 5: Closure { params: None, block: NodeId(4) } (0 to 13)
 6: Block(BlockId(1)) (0 to 14)
+==== SCOPE ====
+0: Frame Scope, variables: [  ], node_id: NodeId(6)
+1: Frame Scope, variables: [  ], node_id: NodeId(6)
+2: Frame Scope, variables: [  ], node_id: NodeId(4)
 
