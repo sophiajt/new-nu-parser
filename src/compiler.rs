@@ -4,8 +4,6 @@ use crate::{
     parser::{AstNode, Block, NodeId},
 };
 use std::collections::HashMap;
-use std::env::var;
-use std::thread::scope;
 
 pub struct RollbackPoint {
     idx_span_start: usize,
@@ -25,27 +23,27 @@ pub struct Span {
 pub struct ScopeId(pub usize);
 
 #[derive(Debug, PartialEq)]
-pub enum ScopeType {
-    /// Default scope marking the scope of a block/closure
+pub enum FrameType {
+    /// Default scope frame marking the scope of a block/closure
     Scope,
-    /// Immutable scope brought in by an overlay
+    /// Immutable frame brought in by an overlay
     Overlay,
-    /// Mutable scope inserted after activating an overlay to prevent mutating the overlay frame
+    /// Mutable frame inserted after activating an overlay to prevent mutating the overlay frame
     Light,
 }
 
 #[derive(Debug)]
-pub struct Scope {
-    pub scope_type: ScopeType,
+pub struct Frame {
+    pub frame_type: FrameType,
     pub variables: HashMap<Vec<u8>, NodeId>,
-    /// Node that defined the scope (e.g., a block or overlay)
+    /// Node that defined the scope frame (e.g., a block or overlay)
     pub node_id: NodeId,
 }
 
-impl Scope {
-    pub fn new(scope_type: ScopeType, node_id: NodeId) -> Self {
-        Scope {
-            scope_type,
+impl Frame {
+    pub fn new(scope_type: FrameType, node_id: NodeId) -> Self {
+        Frame {
+            frame_type: scope_type,
             variables: HashMap::new(),
             node_id,
         }
@@ -87,9 +85,9 @@ pub struct Compiler {
     pub errors: Vec<SourceError>,
 
     // === The following are used for the resolution pass ===
-    /// All scopes ever entered, indexed by ScopeId
-    pub scopes: Vec<Scope>,
-    /// Stack of currently entered scopes
+    /// All scope frames ever entered, indexed by ScopeId
+    pub scope: Vec<Frame>,
+    /// Stack of currently entered scope frames
     pub scope_stack: Vec<ScopeId>,
 
     /// Variables, indexed by VarId
@@ -125,7 +123,7 @@ impl Compiler {
             // type_resolution: HashMap::new(),
             errors: vec![],
 
-            scopes: vec![],
+            scope: vec![],
             scope_stack: vec![],
 
             variables: vec![],
@@ -148,6 +146,11 @@ impl Compiler {
                     error.severity, error.node_id.0, error.message
                 );
             }
+        }
+
+        println!("==== SCOPE ====");
+        for (i, scope) in self.scope.iter().enumerate() {
+            println!("{i}: {scope:?}");
         }
     }
 
@@ -234,7 +237,7 @@ impl Compiler {
             let last = self.ast_nodes.len() - 1;
             let last_node_id = NodeId(last);
 
-            self.scopes.push(Scope::new(ScopeType::Scope, last_node_id));
+            self.scope.push(Frame::new(FrameType::Scope, last_node_id));
             self.scope_stack.push(ScopeId(0));
 
             self.resolve_node(last_node_id)
@@ -257,9 +260,23 @@ impl Compiler {
                 }
                 self.exit_scope();
             }
+            AstNode::Closure { params, block } => {
+                if let Some(params) = params {
+                    self.resolve_node(params);
+                }
+
+                self.resolve_node(block);
+            }
+            AstNode::Params(ref params) => {
+                // TODO: Remove clone
+                let params = params.clone();
+                for param in params {
+                    self.define_variable(param, false);
+                }
+            }
             AstNode::Let {
                 variable_name,
-                ty,
+                ty: _,
                 initializer,
                 is_mutable,
             } => {
@@ -271,21 +288,21 @@ impl Compiler {
         }
     }
 
-    /// Enter a scope, e.g., a block or a closure
+    /// Enter a scope frame, e.g., a block or a closure
     pub fn enter_scope(&mut self, node_id: NodeId) {
-        self.scopes.push(Scope::new(ScopeType::Scope, node_id));
-        self.scope_stack.push(ScopeId(self.scopes.len() - 1));
+        self.scope.push(Frame::new(FrameType::Scope, node_id));
+        self.scope_stack.push(ScopeId(self.scope.len() - 1));
     }
 
-    /// Exit a scope, e.g., when reaching the end of a block or a closure
+    /// Exit a scope frame, e.g., when reaching the end of a block or a closure
     ///
-    /// When exiting a scope, all overlays (and corresponding light scopes) are removed along
-    /// with the removed scope.
+    /// When exiting a scope frame, all overlays (and corresponding light frames) are removed along
+    /// with the removed frame.
     pub fn exit_scope(&mut self) {
         match self
             .scope_stack
             .iter()
-            .rposition(|scope_id| self.scopes[scope_id.0].scope_type == ScopeType::Scope)
+            .rposition(|scope_id| self.scope[scope_id.0].frame_type == FrameType::Scope)
         {
             None => panic!("internal error: no scope frame to exit"),
             Some(0) => panic!("internal error: can't exit the top-most scope frame"),
@@ -294,14 +311,15 @@ impl Compiler {
     }
 
     pub fn define_variable(&mut self, var_name_id: NodeId, is_mutable: bool) {
-        let var_name = self.get_span_contents(var_name_id).to_vec();
+        let var_name = self.get_span_contents(var_name_id);
+        let var_name = trim_var_name(var_name).to_vec();
 
         let current_scope_id = self
             .scope_stack
             .last()
             .expect("internal error: missing scope frame id");
 
-        self.scopes[current_scope_id.0]
+        self.scope[current_scope_id.0]
             .variables
             .insert(var_name, var_name_id);
 
@@ -315,7 +333,10 @@ impl Compiler {
 
     pub fn find_variable(&self, var_name: &[u8]) -> Option<NodeId> {
         for scope_id in self.scope_stack.iter().rev() {
-            if let Some(id) = self.scopes[scope_id.0].variables.get(var_name) {
+            if let Some(id) = self.scope[scope_id.0]
+                .variables
+                .get(trim_var_name(var_name))
+            {
                 return Some(*id);
             }
         }
@@ -340,5 +361,13 @@ impl Compiler {
                 severity: Severity::Error,
             })
         }
+    }
+}
+
+fn trim_var_name(name: &[u8]) -> &[u8] {
+    if name.starts_with(b"$") && name.len() > 1 {
+        &name[1..]
+    } else {
+        name
     }
 }
