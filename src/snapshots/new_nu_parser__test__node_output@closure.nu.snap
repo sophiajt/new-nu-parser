@@ -12,5 +12,12 @@ input_file: tests/closure.nu
 6: BinaryOp { lhs: NodeId(3), op: NodeId(4), rhs: NodeId(5) } (9 to 16)
 7: Block(BlockId(0)) (9 to 16)
 8: Closure { params: Some(NodeId(2)), block: NodeId(7) } (0 to 17)
-9: Block(BlockId(1)) (0 to 18)
+9: Variable (18 to 20)
+10: Block(BlockId(1)) (0 to 42)
+==== ERRORS ====
+Error (NodeId 9): variable not found
+==== SCOPE ====
+0: Frame { frame_type: Scope, variables: {}, node_id: NodeId(10) }
+1: Frame { frame_type: Scope, variables: {}, node_id: NodeId(10) }
+2: Frame { frame_type: Scope, variables: {[97]: NodeId(0), [98]: NodeId(1)}, node_id: NodeId(7) }
 

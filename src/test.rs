@@ -11,6 +11,7 @@ fn evaluate_example(fname: &Path) -> String {
     let parser = Parser::new(compiler, span_offset);
 
     compiler = parser.parse();
+    compiler.resolve();
 
     compiler.display_state()
 }

@@ -1,7 +1,7 @@
 use crate::errors::Severity;
 use crate::{
     errors::SourceError,
-    parser::{AstNode, Block, NodeId},
+    parser::{AstNode, Block, BlockId, NodeId},
 };
 use std::collections::HashMap;
 
@@ -156,7 +156,8 @@ impl Compiler {
 
     #[allow(clippy::format_collect)]
     pub fn display_state(&self) -> String {
-        self.ast_nodes
+        let mut result: String = self
+            .ast_nodes
             .iter()
             .enumerate()
             .map(|(idx, ast_node)| {
@@ -165,7 +166,24 @@ impl Compiler {
                     idx, ast_node, self.spans[idx].start, self.spans[idx].end
                 )
             })
-            .collect()
+            .collect();
+
+        if !self.errors.is_empty() {
+            result.push_str("==== ERRORS ====\n");
+            for error in &self.errors {
+                result.push_str(&format!(
+                    "{:?} (NodeId {}): {}\n",
+                    error.severity, error.node_id.0, error.message
+                ));
+            }
+        }
+
+        result.push_str("==== SCOPE ====\n");
+        for (i, scope) in self.scope.iter().enumerate() {
+            result.push_str(&format!("{i}: {scope:?}\n"));
+        }
+
+        result
     }
 
     pub fn add_file(&mut self, fname: &str, contents: &[u8]) {
@@ -246,26 +264,20 @@ impl Compiler {
 
     pub fn resolve_node(&mut self, node_id: NodeId) {
         match self.ast_nodes[node_id.0] {
-            AstNode::Block(block_id) => {
-                // TODO: Remove clone
-                let block = self
-                    .blocks
-                    .get(block_id.0)
-                    .expect("internal error: missing block")
-                    .clone();
-
-                self.enter_scope(node_id);
-                for inner_node_id in block.nodes {
-                    self.resolve_node(inner_node_id);
-                }
-                self.exit_scope();
-            }
+            AstNode::Block(block_id) => self.resolve_block(node_id, block_id, None),
             AstNode::Closure { params, block } => {
+                // making sure the closure parameters and body and up in the same scope frame
+                self.enter_scope(block);
                 if let Some(params) = params {
                     self.resolve_node(params);
                 }
+                let closure_scope = self.exit_scope();
 
-                self.resolve_node(block);
+                let AstNode::Block(block_id) = self.ast_nodes[block.0] else {
+                    panic!("internal error: closure's body is not a block");
+                };
+
+                self.resolve_block(block, block_id, Some(closure_scope));
             }
             AstNode::Params(ref params) => {
                 // TODO: Remove clone
@@ -288,7 +300,37 @@ impl Compiler {
         }
     }
 
-    /// Enter a scope frame, e.g., a block or a closure
+    pub fn resolve_block(
+        &mut self,
+        node_id: NodeId,
+        block_id: BlockId,
+        reused_scope: Option<ScopeId>,
+    ) {
+        // TODO: Remove clone
+        let block = self
+            .blocks
+            .get(block_id.0)
+            .expect("internal error: missing block")
+            .clone();
+
+        if let Some(scope_id) = reused_scope {
+            self.enter_existing_scope(scope_id);
+        } else {
+            self.enter_scope(node_id);
+        }
+
+        for inner_node_id in block.nodes {
+            self.resolve_node(inner_node_id);
+        }
+        self.exit_scope();
+    }
+
+    /// Enter an existing scope frame, e.g., a block or a closure
+    pub fn enter_existing_scope(&mut self, scope_id: ScopeId) {
+        self.scope_stack.push(scope_id);
+    }
+
+    /// Enter a new scope frame, e.g., a block or a closure
     pub fn enter_scope(&mut self, node_id: NodeId) {
         self.scope.push(Frame::new(FrameType::Scope, node_id));
         self.scope_stack.push(ScopeId(self.scope.len() - 1));
@@ -298,7 +340,7 @@ impl Compiler {
     ///
     /// When exiting a scope frame, all overlays (and corresponding light frames) are removed along
     /// with the removed frame.
-    pub fn exit_scope(&mut self) {
+    pub fn exit_scope(&mut self) -> ScopeId {
         match self
             .scope_stack
             .iter()
@@ -306,7 +348,11 @@ impl Compiler {
         {
             None => panic!("internal error: no scope frame to exit"),
             Some(0) => panic!("internal error: can't exit the top-most scope frame"),
-            Some(pos) => self.scope_stack.truncate(pos),
+            Some(pos) => {
+                let scope_id = self.scope_stack[pos];
+                self.scope_stack.truncate(pos);
+                scope_id
+            }
         }
     }
 
