@@ -243,6 +243,14 @@ pub enum TokenType {
     ThinArrow,
     ThickArrow,
     Newline,
+    ErrGreaterThanPipe,
+    OutErrGreaterThanPipe,
+    OutGreaterThan,
+    OutGreaterGreaterThan,
+    ErrGreaterThan,
+    ErrGreaterGreaterThan,
+    OutErrGreaterThan,
+    OutErrGreaterGreaterThan,
 }
 
 #[derive(Debug)]
@@ -2025,9 +2033,41 @@ impl Parser {
         })
     }
 
-    pub fn lex_symbol(&mut self) -> Option<Token> {
+    fn lex_redirect_symbol(&mut self) -> Option<Token> {
         let span_start = self.span_offset;
+        let content = &self.compiler.source[span_start..];
+        let redirect_tokens: [(&[u8], TokenType); 8] = [
+            (b"o>", TokenType::OutGreaterThan),
+            (b"o>>", TokenType::OutGreaterGreaterThan),
+            (b"e>", TokenType::ErrGreaterThan),
+            (b"e>>", TokenType::ErrGreaterGreaterThan),
+            (b"o+e>", TokenType::OutErrGreaterThan),
+            (b"o+e>>", TokenType::OutErrGreaterGreaterThan),
+            (b"e>|", TokenType::ErrGreaterThanPipe),
+            (b"o+e>|", TokenType::OutErrGreaterThanPipe),
+        ];
+        for (bytes, token_type) in redirect_tokens {
+            if content.starts_with(bytes) {
+                let result = Token {
+                    token_type,
+                    span_start,
+                    span_end: span_start + bytes.len(),
+                };
+                self.span_offset = result.span_end;
+                return Some(result);
+            }
+        }
+        None
+    }
 
+    pub fn lex_symbol(&mut self) -> Option<Token> {
+        // try span redirection symbol first.
+        let result = self.lex_redirect_symbol();
+        if result.is_some() {
+            return result;
+        }
+
+        let span_start = self.span_offset;
         let result = match self.compiler.source[span_start] {
             b'(' => Token {
                 token_type: TokenType::LParen,
@@ -2372,7 +2412,7 @@ impl Parser {
             } else if self.compiler.source[self.span_offset] == b'#' {
                 // Comment
                 self.skip_comment();
-            } else if is_symbol(self.compiler.source[self.span_offset]) {
+            } else if is_symbol(&self.compiler.source[self.span_offset..]) {
                 return self.lex_symbol();
             } else if self.compiler.source[self.span_offset] == b' '
                 || self.compiler.source[self.span_offset] == b'\t'
@@ -2397,10 +2437,24 @@ impl Parser {
     }
 }
 
-fn is_symbol(b: u8) -> bool {
-    [
+fn is_symbol(source: &[u8]) -> bool {
+    let first_byte = source[0];
+    if [
         b'+', b'-', b'*', b'/', b'.', b',', b'(', b'[', b'{', b'<', b')', b']', b'}', b'>', b':',
         b';', b'=', b'$', b'|', b'!', b'~', b'&', b'\'', b'"', b'?',
     ]
-    .contains(&b)
+    .contains(&first_byte)
+    {
+        return true;
+    }
+
+    let redirect_symbols: [&[u8]; 8] = [
+        b"o>", b"e>", b"o>>", b"e>>", b"o+e>", b"o+e>>", b"e>|", b"o+e>|",
+    ];
+    for s in redirect_symbols {
+        if source.starts_with(s) {
+            return true;
+        }
+    }
+    return false;
 }
