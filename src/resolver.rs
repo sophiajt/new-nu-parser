@@ -268,6 +268,25 @@ impl<'a> Resolver<'a> {
         }
     }
 
+    pub fn resolve_variable(&mut self, unbound_node_id: NodeId) {
+        let var_name = self.compiler.get_span_contents(unbound_node_id);
+
+        if let Some(node_id) = self.find_variable(var_name) {
+            let var_id = self
+                .var_resolution
+                .get(&node_id)
+                .expect("internal error: missing resolved variable");
+
+            self.var_resolution.insert(unbound_node_id, *var_id);
+        } else {
+            self.errors.push(SourceError {
+                message: "variable not found".to_string(),
+                node_id: unbound_node_id,
+                severity: Severity::Error,
+            })
+        }
+    }
+
     pub fn resolve_block(
         &mut self,
         node_id: NodeId,
@@ -354,25 +373,6 @@ impl<'a> Resolver<'a> {
         }
 
         None
-    }
-
-    pub fn resolve_variable(&mut self, unbound_node_id: NodeId) {
-        let var_name = self.compiler.get_span_contents(unbound_node_id);
-
-        if let Some(node_id) = self.find_variable(var_name) {
-            let var_id = self
-                .var_resolution
-                .get(&node_id)
-                .expect("internal error: missing resolved variable");
-
-            self.var_resolution.insert(unbound_node_id, *var_id);
-        } else {
-            self.errors.push(SourceError {
-                message: "variable not found".to_string(),
-                node_id: unbound_node_id,
-                severity: Severity::Error,
-            })
-        }
     }
 }
 
