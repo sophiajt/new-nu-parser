@@ -290,7 +290,7 @@ impl Compiler {
                 let def_scope = self.exit_scope();
 
                 let AstNode::Block(block_id) = self.ast_nodes[block.0] else {
-                    panic!("internal error: closure's body is not a block");
+                    panic!("internal error: command definition's body is not a block");
                 };
 
                 self.resolve_block(block, block_id, Some(def_scope));
@@ -328,7 +328,7 @@ impl Compiler {
                 self.resolve_node(range);
 
                 let AstNode::Block(block_id) = self.ast_nodes[block.0] else {
-                    panic!("internal error: closure's body is not a block");
+                    panic!("internal error: for's body is not a block");
                 };
 
                 self.resolve_block(block, block_id, Some(for_body_scope));
