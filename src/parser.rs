@@ -480,6 +480,7 @@ impl Parser {
                             span_end,
                         );
                     }
+                    // TODO: Are we going to support method calls with dot syntax?
                     AstNode::Call { args, .. } => {
                         args.insert(0, expr);
                         expr = self.create_node(

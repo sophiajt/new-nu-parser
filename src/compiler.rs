@@ -244,7 +244,7 @@ impl Compiler {
             .expect("internal error: missing source of span")
     }
 
-    // === The following methods are used for the resolution pass ===
+    // === The following methods are used for the name binding pass ===
 
     pub fn resolve(&mut self) {
         if !self.ast_nodes.is_empty() {
@@ -260,20 +260,40 @@ impl Compiler {
 
     pub fn resolve_node(&mut self, node_id: NodeId) {
         match self.ast_nodes[node_id.0] {
+            AstNode::Variable => self.resolve_variable(node_id),
             AstNode::Block(block_id) => self.resolve_block(node_id, block_id, None),
             AstNode::Closure { params, block } => {
-                // making sure the closure parameters and body and up in the same scope frame
-                self.enter_scope(block);
-                if let Some(params) = params {
+                // making sure the closure parameters and body end up in the same scope frame
+                let closure_scope = if let Some(params) = params {
+                    self.enter_scope(block);
                     self.resolve_node(params);
-                }
-                let closure_scope = self.exit_scope();
+                    Some(self.exit_scope())
+                } else {
+                    None
+                };
 
                 let AstNode::Block(block_id) = self.ast_nodes[block.0] else {
                     panic!("internal error: closure's body is not a block");
                 };
 
-                self.resolve_block(block, block_id, Some(closure_scope));
+                self.resolve_block(block, block_id, closure_scope);
+            }
+            AstNode::Def {
+                name: _,
+                params,
+                return_ty: _,
+                block,
+            } => {
+                // making sure the def parameters and body end up in the same scope frame
+                self.enter_scope(block);
+                self.resolve_node(params);
+                let def_scope = self.exit_scope();
+
+                let AstNode::Block(block_id) = self.ast_nodes[block.0] else {
+                    panic!("internal error: closure's body is not a block");
+                };
+
+                self.resolve_block(block, block_id, Some(def_scope));
             }
             AstNode::Params(ref params) => {
                 // TODO: Remove clone
@@ -291,7 +311,104 @@ impl Compiler {
                 self.resolve_node(initializer);
                 self.define_variable(variable_name, is_mutable)
             }
-            AstNode::Variable => self.resolve_variable(node_id),
+            AstNode::While { condition, block } => {
+                self.resolve_node(condition);
+                self.resolve_node(block);
+            }
+            AstNode::For {
+                variable,
+                range,
+                block,
+            } => {
+                // making sure the for loop variable and body end up in the same scope frame
+                self.enter_scope(block);
+                self.define_variable(variable, false);
+                let for_body_scope = self.exit_scope();
+
+                self.resolve_node(range);
+
+                let AstNode::Block(block_id) = self.ast_nodes[block.0] else {
+                    panic!("internal error: closure's body is not a block");
+                };
+
+                self.resolve_block(block, block_id, Some(for_body_scope));
+            }
+            AstNode::Loop { block } => {
+                self.resolve_node(block);
+            }
+            AstNode::Call { head: _, ref args } => {
+                // TODO: Remove clone
+                let args = args.clone();
+                for arg in args {
+                    self.resolve_node(arg);
+                }
+            }
+            AstNode::BinaryOp { lhs, op: _, rhs } => {
+                self.resolve_node(lhs);
+                self.resolve_node(rhs);
+            }
+            AstNode::Range { lhs, rhs } => {
+                self.resolve_node(lhs);
+                self.resolve_node(rhs);
+            }
+            AstNode::List(ref nodes) => {
+                // TODO: Remove clone
+                let nodes = nodes.clone();
+                for node in nodes {
+                    self.resolve_node(node);
+                }
+            }
+            AstNode::Table { header, ref rows } => {
+                // TODO: Remove clone
+                let rows = rows.clone();
+                self.resolve_node(header);
+                for row in rows {
+                    self.resolve_node(row);
+                }
+            }
+            AstNode::Record { ref pairs } => {
+                // TODO: Remove clone
+                let pairs = pairs.clone();
+                for (key, val) in pairs {
+                    self.resolve_node(key);
+                    self.resolve_node(val);
+                }
+            }
+            AstNode::MemberAccess { target, field } => {
+                self.resolve_node(target);
+                self.resolve_node(field);
+            }
+            AstNode::MethodCall { target: _, call } => {
+                self.resolve_node(call);
+            }
+            AstNode::If {
+                condition,
+                then_block,
+                else_block,
+            } => {
+                self.resolve_node(condition);
+                self.resolve_node(then_block);
+                if let Some(block) = else_block {
+                    self.resolve_node(block);
+                }
+            }
+            AstNode::Match {
+                target,
+                ref match_arms,
+            } => {
+                // TODO: Remove clone
+                let match_arms = match_arms.clone();
+                self.resolve_node(target);
+                for (arm_lhs, arm_rhs) in match_arms {
+                    self.resolve_node(arm_lhs);
+                    self.resolve_node(arm_rhs);
+                }
+            }
+            AstNode::Statement(node) => self.resolve_node(node),
+            AstNode::Param { .. } => (/* seems unused for now */),
+            AstNode::Type { .. } => ( /* probably doesn't make sense to resolve? */ ),
+            AstNode::NamedValue { .. } => (/* seems unused for now */),
+            // All remaining matches do not contain NodeId => there is nothing to resolve
             _ => (),
         }
     }
