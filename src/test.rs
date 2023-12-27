@@ -1,7 +1,6 @@
 use crate::resolver::Resolver;
 use crate::{compiler::Compiler, parser::Parser};
 use std::path::Path;
-use std::process::exit;
 
 fn evaluate_example(fname: &Path) -> String {
     let mut compiler = Compiler::new();
