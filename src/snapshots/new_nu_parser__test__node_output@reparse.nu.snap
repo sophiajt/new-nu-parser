@@ -21,6 +21,5 @@ Error (NodeId 3): expected list item
 Error (NodeId 7): variable not found
 ==== SCOPE ====
 0: Frame Scope, variables: [  ], node_id: NodeId(12)
-1: Frame Scope, variables: [  ], node_id: NodeId(12)
-2: Frame Scope, variables: [  ], node_id: NodeId(8)
+1: Frame Scope, variables: [  ], node_id: NodeId(8)
 

@@ -15,6 +15,5 @@ Error (NodeId 0): variable not found
 Error (NodeId 2): variable not found
 ==== SCOPE ====
 0: Frame Scope, variables: [  ], node_id: NodeId(6)
-1: Frame Scope, variables: [  ], node_id: NodeId(6)
-2: Frame Scope, variables: [  ], node_id: NodeId(4)
+1: Frame Scope, variables: [  ], node_id: NodeId(4)
 

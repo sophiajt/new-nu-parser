@@ -250,10 +250,6 @@ impl Compiler {
         if !self.ast_nodes.is_empty() {
             let last = self.ast_nodes.len() - 1;
             let last_node_id = NodeId(last);
-
-            self.scope.push(Frame::new(FrameType::Scope, last_node_id));
-            self.scope_stack.push(ScopeId(0));
-
             self.resolve_node(last_node_id)
         }
     }
@@ -460,7 +456,6 @@ impl Compiler {
             .rposition(|scope_id| self.scope[scope_id.0].frame_type == FrameType::Scope)
         {
             None => panic!("internal error: no scope frame to exit"),
-            Some(0) => panic!("internal error: can't exit the top-most scope frame"),
             Some(pos) => {
                 let scope_id = self.scope_stack[pos];
                 self.scope_stack.truncate(pos);

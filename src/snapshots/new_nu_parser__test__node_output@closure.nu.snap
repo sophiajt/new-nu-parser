@@ -18,6 +18,5 @@ input_file: tests/closure.nu
 Error (NodeId 9): variable not found
 ==== SCOPE ====
 0: Frame Scope, variables: [  ], node_id: NodeId(10)
-1: Frame Scope, variables: [  ], node_id: NodeId(10)
-2: Frame Scope, variables: [ a: NodeId(0), b: NodeId(1) ], node_id: NodeId(7)
+1: Frame Scope, variables: [ a: NodeId(0), b: NodeId(1) ], node_id: NodeId(7)
 

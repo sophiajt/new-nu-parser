@@ -15,5 +15,4 @@ Error (NodeId 3): expected: colon ':'
 Error (NodeId 4): incomplete expression
 ==== SCOPE ====
 0: Frame Scope, variables: [  ], node_id: NodeId(6)
-1: Frame Scope, variables: [  ], node_id: NodeId(6)
 
