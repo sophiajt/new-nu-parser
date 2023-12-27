@@ -3,6 +3,7 @@ source: src/test.rs
 expression: evaluate_example(path)
 input_file: tests/string_operation.nu
 ---
+==== COMPILER ====
 0: String (0 to 5)
 1: Plus (6 to 7)
 2: String (8 to 13)

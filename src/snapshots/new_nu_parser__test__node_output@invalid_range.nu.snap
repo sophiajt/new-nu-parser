@@ -3,12 +3,11 @@ source: src/test.rs
 expression: evaluate_example(path)
 input_file: tests/invalid_range.nu
 ---
+==== COMPILER ====
 0: Int (0 to 1)
 1: Garbage (2 to 4)
 2: Int (5 to 6)
 3: Block(BlockId(0)) (0 to 7)
-==== ERRORS ====
+==== COMPILER ERRORS ====
 Error (NodeId 1): incomplete expression
-==== SCOPE ====
-0: Frame Scope, variables: [  ], node_id: NodeId(3)
 
