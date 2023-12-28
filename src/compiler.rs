@@ -42,16 +42,6 @@ pub struct Compiler {
     // pub call_resolution: HashMap<NodeId, CallTarget>,
     // pub type_resolution: HashMap<NodeId, TypeId>,
     pub errors: Vec<SourceError>,
-    // === The following are used for the resolution pass ===
-    // /// All scope frames ever entered, indexed by ScopeId
-    // pub scope: Vec<Frame>,
-    // /// Stack of currently entered scope frames
-    // pub scope_stack: Vec<ScopeId>,
-    //
-    // /// Variables, indexed by VarId
-    // pub variables: Vec<Variable>,
-    // /// Mapping of variable's name node -> Variable
-    // pub var_resolution: HashMap<NodeId, VarId>,
 }
 
 impl Default for Compiler {
