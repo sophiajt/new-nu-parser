@@ -266,7 +266,7 @@ impl<'a> Resolver<'a> {
     }
 
     pub fn resolve_variable(&mut self, unbound_node_id: NodeId) {
-        let var_name = self.compiler.get_span_contents(unbound_node_id);
+        let var_name = trim_var_name(self.compiler.get_span_contents(unbound_node_id));
 
         if let Some(node_id) = self.find_variable(var_name) {
             let var_id = self
@@ -361,10 +361,7 @@ impl<'a> Resolver<'a> {
 
     pub fn find_variable(&self, var_name: &[u8]) -> Option<NodeId> {
         for scope_id in self.scope_stack.iter().rev() {
-            if let Some(id) = self.scope[scope_id.0]
-                .variables
-                .get(trim_var_name(var_name))
-            {
+            if let Some(id) = self.scope[scope_id.0].variables.get(var_name) {
                 return Some(*id);
             }
         }
