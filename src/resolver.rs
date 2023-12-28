@@ -235,9 +235,6 @@ impl<'a> Resolver<'a> {
                 self.resolve_node(target);
                 self.resolve_node(field);
             }
-            AstNode::MethodCall { target: _, call } => {
-                self.resolve_node(call);
-            }
             AstNode::If {
                 condition,
                 then_block,

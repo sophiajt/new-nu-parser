@@ -151,10 +151,6 @@ pub enum AstNode {
         target: NodeId,
         field: NodeId,
     },
-    MethodCall {
-        target: NodeId,
-        call: NodeId,
-    },
     Block(BlockId),
     If {
         condition: NodeId,
@@ -480,20 +476,8 @@ impl Parser {
                             span_end,
                         );
                     }
-                    // TODO: Are we going to support method calls with dot syntax?
-                    AstNode::Call { args, .. } => {
-                        args.insert(0, expr);
-                        expr = self.create_node(
-                            AstNode::MethodCall {
-                                target: expr,
-                                call: field_or_call,
-                            },
-                            span_start,
-                            span_end,
-                        )
-                    }
                     _ => {
-                        self.error("expected field or method call");
+                        self.error("expected field");
                     }
                 }
             } else {
