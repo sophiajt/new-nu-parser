@@ -22,6 +22,8 @@ fn evaluate_example(fname: &Path) -> String {
     resolver.resolve();
     result.push_str(&resolver.display_state());
 
+    compiler.merge_name_bindings(resolver.to_name_bindings());
+
     result
 }
 

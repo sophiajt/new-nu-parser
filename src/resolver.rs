@@ -44,6 +44,36 @@ pub struct Variable {
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub struct VarId(pub usize);
 
+pub struct NameBindings {
+    /// All scope frames ever entered, indexed by ScopeId
+    pub scope: Vec<Frame>,
+    /// Stack of currently entered scope frames
+    pub scope_stack: Vec<ScopeId>,
+    /// Variables, indexed by VarId
+    pub variables: Vec<Variable>,
+    /// Mapping of variable's name node -> Variable
+    pub var_resolution: HashMap<NodeId, VarId>,
+    pub errors: Vec<SourceError>,
+}
+
+impl NameBindings {
+    pub fn new() -> Self {
+        Self {
+            scope: vec![],
+            scope_stack: vec![],
+            variables: vec![],
+            var_resolution: HashMap::new(),
+            errors: vec![],
+        }
+    }
+}
+
+impl Default for NameBindings {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Debug)]
 pub struct Resolver<'a> {
     // Immutable reference to a compiler after the first parsing pass
@@ -53,12 +83,11 @@ pub struct Resolver<'a> {
     pub scope: Vec<Frame>,
     /// Stack of currently entered scope frames
     pub scope_stack: Vec<ScopeId>,
-
     /// Variables, indexed by VarId
     pub variables: Vec<Variable>,
     /// Mapping of variable's name node -> Variable
     pub var_resolution: HashMap<NodeId, VarId>,
-
+    /// Errors encountered during name binding
     pub errors: Vec<SourceError>,
 }
 
@@ -68,11 +97,19 @@ impl<'a> Resolver<'a> {
             compiler,
             scope: vec![],
             scope_stack: vec![],
-
             variables: vec![],
             var_resolution: HashMap::new(),
-
             errors: vec![],
+        }
+    }
+
+    pub fn to_name_bindings(self) -> NameBindings {
+        NameBindings {
+            scope: self.scope,
+            scope_stack: self.scope_stack,
+            variables: self.variables,
+            var_resolution: self.var_resolution,
+            errors: self.errors,
         }
     }
 

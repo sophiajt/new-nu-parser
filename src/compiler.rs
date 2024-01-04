@@ -1,7 +1,9 @@
+use crate::resolver::{Frame, NameBindings, ScopeId, VarId, Variable};
 use crate::{
     errors::SourceError,
     parser::{AstNode, Block, NodeId},
 };
+use std::collections::HashMap;
 
 pub struct RollbackPoint {
     idx_span_start: usize,
@@ -19,18 +21,24 @@ pub struct Span {
 
 #[derive(Debug)]
 pub struct Compiler {
-    // Core information, indexed by NodeId
+    // Core information, indexed by NodeId:
     pub spans: Vec<Span>,
     pub ast_nodes: Vec<AstNode>,
     // node_types: Vec<TypeId>,
     // node_lifetimes: Vec<AllocationLifetime>,
-
-    // Blocks, indexed by BlockId
-    pub blocks: Vec<Block>,
-
+    pub blocks: Vec<Block>, // Blocks, indexed by BlockId
     pub source: Vec<u8>,
-
     pub file_offsets: Vec<(String, usize, usize)>, // fname, start, end
+
+    // name bindings:
+    /// All scope frames ever entered, indexed by ScopeId
+    pub scope: Vec<Frame>,
+    /// Stack of currently entered scope frames
+    pub scope_stack: Vec<ScopeId>,
+    /// Variables, indexed by VarId
+    pub variables: Vec<Variable>,
+    /// Mapping of variable's name node -> Variable
+    pub var_resolution: HashMap<NodeId, VarId>,
 
     // Definitions:
     // indexed by FunId
@@ -57,10 +65,13 @@ impl Compiler {
             ast_nodes: vec![],
             // node_types: vec![],
             blocks: vec![],
-
             source: vec![],
-
             file_offsets: vec![],
+
+            scope: vec![],
+            scope_stack: vec![],
+            variables: vec![],
+            var_resolution: HashMap::new(),
 
             // variables: vec![],
             // functions: vec![],
@@ -100,6 +111,14 @@ impl Compiler {
         }
 
         result
+    }
+
+    pub fn merge_name_bindings(&mut self, name_bindings: NameBindings) {
+        self.scope.extend(name_bindings.scope);
+        self.scope_stack.extend(name_bindings.scope_stack);
+        self.variables.extend(name_bindings.variables);
+        self.var_resolution.extend(name_bindings.var_resolution);
+        self.errors.extend(name_bindings.errors);
     }
 
     pub fn add_file(&mut self, fname: &str, contents: &[u8]) {

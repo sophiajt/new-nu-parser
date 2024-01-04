@@ -20,15 +20,17 @@ fn main() {
 
         let parser = Parser::new(compiler, span_offset);
         compiler = parser.parse();
+
+        compiler.print();
+
+        if !compiler.errors.is_empty() {
+            exit(1);
+        }
+
+        let mut resolver = Resolver::new(&compiler);
+        resolver.resolve();
+        resolver.print();
+
+        compiler.merge_name_bindings(resolver.to_name_bindings());
     }
-
-    compiler.print();
-
-    if !compiler.errors.is_empty() {
-        exit(1);
-    }
-
-    let mut resolver = Resolver::new(&compiler);
-    resolver.resolve();
-    resolver.print();
 }
