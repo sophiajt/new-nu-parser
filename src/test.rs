@@ -1,3 +1,4 @@
+use crate::resolver::Resolver;
 use crate::{compiler::Compiler, parser::Parser};
 use std::path::Path;
 
@@ -9,10 +10,21 @@ fn evaluate_example(fname: &Path) -> String {
     compiler.add_file(&fname.to_string_lossy(), &contents);
 
     let parser = Parser::new(compiler, span_offset);
-
     compiler = parser.parse();
 
-    compiler.display_state()
+    let mut result = compiler.display_state();
+
+    if !compiler.errors.is_empty() {
+        return result;
+    }
+
+    let mut resolver = Resolver::new(&compiler);
+    resolver.resolve();
+    result.push_str(&resolver.display_state());
+
+    compiler.merge_name_bindings(resolver.to_name_bindings());
+
+    result
 }
 
 #[test]

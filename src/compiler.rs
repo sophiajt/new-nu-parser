@@ -1,7 +1,9 @@
+use crate::resolver::{Frame, NameBindings, ScopeId, VarId, Variable};
 use crate::{
     errors::SourceError,
     parser::{AstNode, Block, NodeId},
 };
+use std::collections::HashMap;
 
 pub struct RollbackPoint {
     idx_span_start: usize,
@@ -11,7 +13,7 @@ pub struct RollbackPoint {
     span_offset: usize,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Span {
     pub start: usize,
     pub end: usize,
@@ -19,22 +21,26 @@ pub struct Span {
 
 #[derive(Debug)]
 pub struct Compiler {
-    // Core information, indexed by NodeId
+    // Core information, indexed by NodeId:
     pub spans: Vec<Span>,
-    ast_nodes: Vec<AstNode>,
+    pub ast_nodes: Vec<AstNode>,
     // node_types: Vec<TypeId>,
     // node_lifetimes: Vec<AllocationLifetime>,
-
-    // Blocks, indexed by BlockId
-    pub blocks: Vec<Block>,
-
+    pub blocks: Vec<Block>, // Blocks, indexed by BlockId
     pub source: Vec<u8>,
-
     pub file_offsets: Vec<(String, usize, usize)>, // fname, start, end
 
+    // name bindings:
+    /// All scope frames ever entered, indexed by ScopeId
+    pub scope: Vec<Frame>,
+    /// Stack of currently entered scope frames
+    pub scope_stack: Vec<ScopeId>,
+    /// Variables, indexed by VarId
+    pub variables: Vec<Variable>,
+    /// Mapping of variable's name node -> Variable
+    pub var_resolution: HashMap<NodeId, VarId>,
+
     // Definitions:
-    // indexed by VarId
-    // pub variables: Vec<Variable>,
     // indexed by FunId
     // pub functions: Vec<Function>,
     // indexed by TypeId
@@ -42,7 +48,6 @@ pub struct Compiler {
 
     // Use/def
     // pub call_resolution: HashMap<NodeId, CallTarget>,
-    // pub var_resolution: HashMap<NodeId, VarId>,
     // pub type_resolution: HashMap<NodeId, TypeId>,
     pub errors: Vec<SourceError>,
 }
@@ -60,10 +65,13 @@ impl Compiler {
             ast_nodes: vec![],
             // node_types: vec![],
             blocks: vec![],
-
             source: vec![],
-
             file_offsets: vec![],
+
+            scope: vec![],
+            scope_stack: vec![],
+            variables: vec![],
+            var_resolution: HashMap::new(),
 
             // variables: vec![],
             // functions: vec![],
@@ -77,35 +85,40 @@ impl Compiler {
     }
 
     pub fn print(&self) {
-        for (idx, ast_node) in self.ast_nodes.iter().enumerate() {
-            println!(
-                "{}: {:?} ({} to {})",
-                idx, ast_node, self.spans[idx].start, self.spans[idx].end
-            );
-        }
-        if !self.errors.is_empty() {
-            println!("==== ERRORS ====");
-            for error in &self.errors {
-                println!(
-                    "{:?} (NodeId {}): {}",
-                    error.severity, error.node_id.0, error.message
-                );
-            }
-        }
+        let output = self.display_state();
+        print!("{output}");
     }
 
     #[allow(clippy::format_collect)]
     pub fn display_state(&self) -> String {
-        self.ast_nodes
-            .iter()
-            .enumerate()
-            .map(|(idx, ast_node)| {
-                format!(
-                    "{}: {:?} ({} to {})\n",
-                    idx, ast_node, self.spans[idx].start, self.spans[idx].end
-                )
-            })
-            .collect()
+        let mut result = "==== COMPILER ====\n".to_string();
+
+        for (idx, ast_node) in self.ast_nodes.iter().enumerate() {
+            result.push_str(&format!(
+                "{}: {:?} ({} to {})\n",
+                idx, ast_node, self.spans[idx].start, self.spans[idx].end
+            ));
+        }
+
+        if !self.errors.is_empty() {
+            result.push_str("==== COMPILER ERRORS ====\n");
+            for error in &self.errors {
+                result.push_str(&format!(
+                    "{:?} (NodeId {}): {}\n",
+                    error.severity, error.node_id.0, error.message
+                ));
+            }
+        }
+
+        result
+    }
+
+    pub fn merge_name_bindings(&mut self, name_bindings: NameBindings) {
+        self.scope.extend(name_bindings.scope);
+        self.scope_stack.extend(name_bindings.scope_stack);
+        self.variables.extend(name_bindings.variables);
+        self.var_resolution.extend(name_bindings.var_resolution);
+        self.errors.extend(name_bindings.errors);
     }
 
     pub fn add_file(&mut self, fname: &str, contents: &[u8]) {
@@ -152,5 +165,21 @@ impl Compiler {
         self.spans.truncate(rbp.idx_span_start);
 
         rbp.span_offset
+    }
+
+    /// Get span of node
+    pub fn get_span(&self, node_id: NodeId) -> Span {
+        *self
+            .spans
+            .get(node_id.0)
+            .expect("internal error: missing span of node")
+    }
+
+    /// Get the source contents of a span of a node
+    pub fn get_span_contents(&self, node_id: NodeId) -> &[u8] {
+        let span = self.get_span(node_id);
+        self.source
+            .get(span.start..span.end)
+            .expect("internal error: missing source of span")
     }
 }
