@@ -293,7 +293,7 @@ impl Parser {
     }
 
     pub fn math_expression(&mut self, allow_assignment: bool) -> NodeId {
-        let mut expr_stack = vec![];
+        let mut expr_stack = Vec::<(NodeId, NodeId)>::new();
 
         let mut last_prec = 1000000;
 
@@ -307,7 +307,7 @@ impl Parser {
         }
 
         // Otherwise assume a math expression
-        let lhs = self.simple_expression();
+        let mut leftmost = self.simple_expression();
 
         if let Some(Token {
             token_type: TokenType::Equals,
@@ -322,10 +322,16 @@ impl Parser {
             let rhs = self.expression();
             let span_end = self.get_span_end(rhs);
 
-            return self.create_node(AstNode::BinaryOp { lhs, op, rhs }, span_start, span_end);
+            return self.create_node(
+                AstNode::BinaryOp {
+                    lhs: leftmost,
+                    op,
+                    rhs,
+                },
+                span_start,
+                span_end,
+            );
         }
-
-        expr_stack.push(lhs);
 
         while self.has_tokens() {
             if self.is_operator() {
@@ -342,36 +348,29 @@ impl Parser {
                     self.error("incomplete math expression")
                 };
 
-                while op_prec <= last_prec && expr_stack.len() > 1 {
-                    let rhs = expr_stack
-                        .pop()
-                        .expect("internal error: expression stack empty");
-                    let op = expr_stack
-                        .pop()
-                        .expect("internal error: expression stack empty");
+                while op_prec <= last_prec {
+                    let Some((op, rhs)) = expr_stack.pop() else {
+                        break;
+                    };
 
                     last_prec = self.operator_precedence(op);
 
                     if last_prec < op_prec {
-                        expr_stack.push(op);
-                        expr_stack.push(rhs);
+                        expr_stack.push((op, rhs));
                         break;
                     }
 
-                    let lhs = expr_stack
-                        .pop()
-                        .expect("internal error: expression stack empty");
+                    let lhs = expr_stack.last_mut().map_or(&mut leftmost, |l| &mut l.1);
 
-                    let (span_start, span_end) = self.spanning(lhs, rhs);
-                    expr_stack.push(self.create_node(
-                        AstNode::BinaryOp { lhs, op, rhs },
+                    let (span_start, span_end) = self.spanning(*lhs, rhs);
+                    *lhs = self.create_node(
+                        AstNode::BinaryOp { lhs: *lhs, op, rhs },
                         span_start,
                         span_end,
-                    ))
+                    );
                 }
 
-                expr_stack.push(op);
-                expr_stack.push(rhs);
+                expr_stack.push((op, rhs));
 
                 last_prec = op_prec;
             } else {
@@ -379,29 +378,19 @@ impl Parser {
             }
         }
 
-        while expr_stack.len() > 1 {
-            let rhs = expr_stack
-                .pop()
-                .expect("internal error: expression stack empty");
-            let op = expr_stack
-                .pop()
-                .expect("internal error: expression stack empty");
-            let lhs = expr_stack
-                .pop()
-                .expect("internal error: expression stack empty");
+        while let Some((op, rhs)) = expr_stack.pop() {
+            let lhs = expr_stack.last_mut().map_or(&mut leftmost, |l| &mut l.1);
 
-            let (span_start, span_end) = self.spanning(lhs, rhs);
+            let (span_start, span_end) = self.spanning(*lhs, rhs);
 
-            expr_stack.push(self.create_node(
-                AstNode::BinaryOp { lhs, op, rhs },
+            *lhs = self.create_node(
+                AstNode::BinaryOp { lhs: *lhs, op, rhs },
                 span_start,
                 span_end,
-            ))
+            );
         }
 
-        expr_stack
-            .pop()
-            .expect("internal error: expression stack empty")
+        leftmost
     }
 
     pub fn simple_expression(&mut self) -> NodeId {
