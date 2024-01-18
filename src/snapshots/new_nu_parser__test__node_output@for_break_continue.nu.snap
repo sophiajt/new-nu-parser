@@ -3,6 +3,7 @@ source: src/test.rs
 expression: evaluate_example(path)
 input_file: tests/for_break_continue.nu
 ---
+==== COMPILER ====
 0: Variable (4 to 5)
 1: Int (8 to 9)
 2: Let { variable_name: NodeId(0), ty: None, initializer: NodeId(1), is_mutable: true } (0 to 9)
@@ -35,4 +36,9 @@ input_file: tests/for_break_continue.nu
 29: Block(BlockId(2)) (27 to 124)
 30: For { variable: NodeId(3), range: NodeId(7), block: NodeId(29) } (10 to 124)
 31: Block(BlockId(3)) (0 to 124)
+==== SCOPE ====
+0: Frame Scope, variables: [ x: NodeId(0) ], node_id: NodeId(31)
+1: Frame Scope, variables: [ i: NodeId(3) ], node_id: NodeId(29)
+2: Frame Scope, variables: [  ], node_id: NodeId(13)
+3: Frame Scope, variables: [  ], node_id: NodeId(20)
 

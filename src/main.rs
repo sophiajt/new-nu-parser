@@ -2,6 +2,7 @@ use std::process::exit;
 
 use new_nu_parser::compiler::Compiler;
 use new_nu_parser::parser::Parser;
+use new_nu_parser::resolver::Resolver;
 
 fn main() {
     let mut compiler = Compiler::new();
@@ -18,9 +19,18 @@ fn main() {
         compiler.add_file(&fname, &contents);
 
         let parser = Parser::new(compiler, span_offset);
-
         compiler = parser.parse();
-    }
 
-    compiler.print();
+        compiler.print();
+
+        if !compiler.errors.is_empty() {
+            exit(1);
+        }
+
+        let mut resolver = Resolver::new(&compiler);
+        resolver.resolve();
+        resolver.print();
+
+        compiler.merge_name_bindings(resolver.to_name_bindings());
+    }
 }
