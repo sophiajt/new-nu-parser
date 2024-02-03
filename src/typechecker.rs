@@ -1,9 +1,17 @@
 use crate::compiler::Compiler;
 use crate::errors::{Severity, SourceError};
-use crate::parser::NodeId;
+use crate::parser::{AstNode, NodeId};
 
 #[derive(Debug, Clone, Copy)]
 pub struct TypeId(pub usize);
+
+pub const UNIT_TYPE: TypeId = TypeId(0);
+pub const ANY_TYPE: TypeId = TypeId(1);
+pub const NOTHING_TYPE: TypeId = TypeId(2);
+pub const INT_TYPE: TypeId = TypeId(3);
+pub const FLOAT_TYPE: TypeId = TypeId(4);
+pub const BOOL_TYPE: TypeId = TypeId(5);
+pub const STRING_TYPE: TypeId = TypeId(6);
 
 pub const UNKNOWN_TYPE: TypeId = TypeId(usize::MAX);
 
@@ -48,6 +56,16 @@ impl<'a> Typechecker<'a> {
 
         result.push_str("==== TYPES ====\n");
 
+        if !self.errors.is_empty() {
+            result.push_str("==== TYPE ERRORS ====\n");
+            for error in &self.errors {
+                result.push_str(&format!(
+                    "{:?} (NodeId {}): {}\n",
+                    error.severity, error.node_id.0, error.message
+                ));
+            }
+        }
+
         result
     }
 
@@ -61,7 +79,60 @@ impl<'a> Typechecker<'a> {
 
     pub fn typecheck_node(&mut self, node_id: NodeId) {
         match self.compiler.ast_nodes[node_id.0] {
-            _ => self.error("unsupported ast node in typechecker", node_id),
+            AstNode::Null => {
+                self.node_types[node_id.0] = NOTHING_TYPE;
+            }
+            AstNode::Int => {
+                self.node_types[node_id.0] = INT_TYPE;
+            }
+            AstNode::Float => {
+                self.node_types[node_id.0] = FLOAT_TYPE;
+            }
+            AstNode::True | AstNode::False => {
+                self.node_types[node_id.0] = BOOL_TYPE;
+            }
+            AstNode::String => {
+                self.node_types[node_id.0] = STRING_TYPE;
+            }
+            AstNode::Type {
+                name,
+                params: _params,
+                optional: _optional,
+            } => {
+                // TODO: Add support for compound and optional types
+                self.node_types[node_id.0] = self.name_to_type(name);
+            }
+            AstNode::Variable => {
+                let _variable = self
+                    .compiler
+                    .var_resolution
+                    .get(&node_id)
+                    .expect("missing resolved variable");
+
+                // TODO: Add types to variables
+                self.node_types[node_id.0] = ANY_TYPE;
+            }
+            AstNode::Block(block_id) => {
+                let block = &self.compiler.blocks[block_id.0];
+
+                for inner_node_id in &block.nodes {
+                    self.typecheck_node(*inner_node_id);
+                }
+            }
+            AstNode::Closure { params, block } => {
+                if let Some(params_node_id) = params {
+                    self.typecheck_node(params_node_id);
+                }
+
+                self.typecheck_node(block);
+            }
+            _ => self.error(
+                format!(
+                    "unsupported ast node '{:?}' in typechecker",
+                    self.compiler.ast_nodes[node_id.0]
+                ),
+                node_id,
+            ),
         }
     }
 
@@ -71,5 +142,55 @@ impl<'a> Typechecker<'a> {
             node_id,
             severity: Severity::Error,
         })
+    }
+
+    pub fn name_to_type(&mut self, name_node_id: NodeId) -> TypeId {
+        let name = self.compiler.get_span_contents(name_node_id);
+
+        // taken from parse_shape_name() in Nushell:
+        match name {
+            b"any" => ANY_TYPE,
+            // b"binary" => SyntaxShape::Binary,
+            // b"block" => {
+            //     working_set.error(ParseError::LabeledErrorWithHelp {
+            //         error: "Blocks are not support as first-class values".into(),
+            //         label: "blocks are not supported as values".into(),
+            //         help: "Use 'closure' instead of 'block'".into(),
+            //         span,
+            //     });
+            //     SyntaxShape::Any
+            // }
+            b"bool" => BOOL_TYPE,
+            // b"cell-path" => SyntaxShape::CellPath,
+            // b"closure" => SyntaxShape::Closure(None), //FIXME: Blocks should have known output types
+            // b"datetime" => SyntaxShape::DateTime,
+            // b"directory" => SyntaxShape::Directory,
+            // b"duration" => SyntaxShape::Duration,
+            // b"error" => SyntaxShape::Error,
+            b"float" => FLOAT_TYPE,
+            // b"filesize" => SyntaxShape::Filesize,
+            // b"glob" => SyntaxShape::GlobPattern,
+            b"int" => INT_TYPE,
+            // _ if bytes.starts_with(b"list") => parse_list_shape(working_set, bytes, span, use_loc),
+            b"nothing" => NOTHING_TYPE,
+            // b"number" => SyntaxShape::Number,
+            // b"path" => SyntaxShape::Filepath,
+            // b"range" => SyntaxShape::Range,
+            // _ if bytes.starts_with(b"record") => {
+            //     parse_collection_shape(working_set, bytes, span, use_loc)
+            // }
+            b"string" => STRING_TYPE,
+            // _ if bytes.starts_with(b"table") => {
+            //     parse_collection_shape(working_set, bytes, span, use_loc)
+            // }
+            _ => {
+                // if bytes.contains(&b'@') {
+                //     // type with completion
+                // } else {
+                self.error("unknown type", name_node_id);
+                UNKNOWN_TYPE
+                // }
+            }
+        }
     }
 }
