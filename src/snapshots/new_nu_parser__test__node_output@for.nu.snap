@@ -40,4 +40,5 @@ input_file: tests/for.nu
 0: Frame Scope, variables: [ x: NodeId(0) ], node_id: NodeId(31)
 1: Frame Scope, variables: [ i: NodeId(3) ], node_id: NodeId(15)
 2: Frame Scope, variables: [ i: NodeId(17) ], node_id: NodeId(29)
+==== TYPES ====
 

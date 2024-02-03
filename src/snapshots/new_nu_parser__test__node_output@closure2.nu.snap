@@ -17,4 +17,5 @@ input_file: tests/closure2.nu
 ==== SCOPE ERRORS ====
 Error (NodeId 0): variable not found
 Error (NodeId 2): variable not found
+==== TYPES ====
 

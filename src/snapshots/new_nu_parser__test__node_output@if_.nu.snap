@@ -29,4 +29,5 @@ input_file: tests/if_.nu
 1: Frame Scope, variables: [  ], node_id: NodeId(8)
 2: Frame Scope, variables: [  ], node_id: NodeId(14)
 3: Frame Scope, variables: [  ], node_id: NodeId(16)
+==== TYPES ====
 
