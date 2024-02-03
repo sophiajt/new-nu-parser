@@ -124,6 +124,7 @@ impl Compiler {
 
     pub fn merge_types(&mut self, types: Types) {
         self.node_types.extend(types.node_types);
+        self.errors.extend(types.errors);
     }
 
     pub fn add_file(&mut self, fname: &str, contents: &[u8]) {
