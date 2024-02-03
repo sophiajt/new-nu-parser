@@ -25,6 +25,10 @@ fn evaluate_example(fname: &Path) -> String {
 
     compiler.merge_name_bindings(resolver.to_name_bindings());
 
+    if !compiler.errors.is_empty() {
+        return result;
+    }
+
     let mut typechecker = Typechecker::new(&compiler);
     typechecker.typecheck();
     result.push_str(&typechecker.display_state());
