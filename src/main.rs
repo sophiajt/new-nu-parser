@@ -34,6 +34,10 @@ fn main() {
 
         compiler.merge_name_bindings(resolver.to_name_bindings());
 
+        if !compiler.errors.is_empty() {
+            exit(1);
+        }
+
         let mut typechecker = Typechecker::new(&compiler);
         typechecker.typecheck();
         typechecker.print();

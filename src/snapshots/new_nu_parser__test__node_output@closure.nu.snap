@@ -20,5 +20,4 @@ input_file: tests/closure.nu
 1: Frame Scope, variables: [ a: NodeId(0), b: NodeId(1) ], node_id: NodeId(7)
 ==== SCOPE ERRORS ====
 Error (NodeId 9): variable not found
-==== TYPES ====
 
