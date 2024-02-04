@@ -48,6 +48,8 @@ pub struct Typechecker<'a> {
 
     /// Types of nodes. Each type in this vector matches a node in compiler.ast_nodes at the same position.
     pub node_types: Vec<TypeId>,
+    /// Type of each Variable in compiler.variables, indexed by VarId
+    pub variable_types: Vec<TypeId>,
     /// Errors encountered during type checking
     pub errors: Vec<SourceError>,
 }
@@ -57,6 +59,7 @@ impl<'a> Typechecker<'a> {
         Self {
             compiler,
             node_types: vec![UNKNOWN_TYPE; compiler.ast_nodes.len()],
+            variable_types: vec![UNKNOWN_TYPE; compiler.variables.len()],
             errors: vec![],
         }
     }
@@ -128,16 +131,6 @@ impl<'a> Typechecker<'a> {
                 // TODO: Add support for compound and optional types
                 self.node_types[node_id.0] = self.name_to_type(name);
             }
-            AstNode::Variable => {
-                let _variable = self
-                    .compiler
-                    .var_resolution
-                    .get(&node_id)
-                    .expect("missing resolved variable");
-
-                // TODO: Add types to variables
-                self.node_types[node_id.0] = ANY_TYPE;
-            }
             AstNode::Block(block_id) => {
                 let block = &self.compiler.blocks[block_id.0];
 
@@ -156,6 +149,21 @@ impl<'a> Typechecker<'a> {
 
                 self.node_types[node_id.0] = CLOSURE_TYPE;
             }
+            AstNode::Let {
+                variable_name,
+                ty,
+                initializer,
+                is_mutable: _,
+            } => self.typecheck_let(variable_name, ty, initializer, node_id),
+            AstNode::Variable => {
+                let var_id = self
+                    .compiler
+                    .var_resolution
+                    .get(&node_id)
+                    .expect("missing resolved variable");
+
+                self.node_types[node_id.0] = self.variable_types[var_id.0];
+            }
             _ => self.error(
                 format!(
                     "unsupported ast node '{:?}' in typechecker",
@@ -164,6 +172,42 @@ impl<'a> Typechecker<'a> {
                 node_id,
             ),
         }
+    }
+
+    pub fn typecheck_let(
+        &mut self,
+        variable_name: NodeId,
+        ty: Option<NodeId>,
+        initializer: NodeId,
+        node_id: NodeId,
+    ) {
+        self.typecheck_node(initializer);
+
+        if let Some(ty) = ty {
+            self.typecheck_node(ty);
+
+            // TODO make this a compatibility check rather than equality check
+            if self.node_types[ty.0] != self.node_types[initializer.0] {
+                self.error("initializer does not match declared type", initializer)
+            }
+        }
+
+        let var_id = self
+            .compiler
+            .var_resolution
+            .get(&variable_name)
+            .expect("missing declared variable");
+
+        let ty = if let Some(ty) = ty {
+            self.node_types[ty.0]
+        } else {
+            self.node_types[initializer.0]
+        };
+
+        self.variable_types[var_id.0] = ty;
+        self.node_types[variable_name.0] = ty;
+
+        self.node_types[node_id.0] = UNIT_TYPE;
     }
 
     pub fn error(&mut self, msg: impl Into<String>, node_id: NodeId) {

@@ -26,9 +26,9 @@ input_file: tests/loop.nu
 1: Frame Scope, variables: [  ], node_id: NodeId(14)
 2: Frame Scope, variables: [  ], node_id: NodeId(8)
 ==== TYPES ====
-0: unknown
-1: unknown
-2: unknown
+0: int
+1: int
+2: ()
 3: unknown
 4: unknown
 5: unknown
@@ -44,6 +44,5 @@ input_file: tests/loop.nu
 15: unknown
 16: ()
 ==== TYPE ERRORS ====
-Error (NodeId 2): unsupported ast node 'Let { variable_name: NodeId(0), ty: None, initializer: NodeId(1), is_mutable: true }' in typechecker
 Error (NodeId 15): unsupported ast node 'Loop { block: NodeId(14) }' in typechecker
 
