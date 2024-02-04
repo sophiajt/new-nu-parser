@@ -6,6 +6,7 @@ use std::fmt::{Display, Formatter};
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TypeId(pub usize);
 
+/// Unit type signifies "no type". For example, statemenets like let x = ... do not have any type.
 pub const UNIT_TYPE: TypeId = TypeId(0);
 pub const ANY_TYPE: TypeId = TypeId(1);
 pub const NOTHING_TYPE: TypeId = TypeId(2);
