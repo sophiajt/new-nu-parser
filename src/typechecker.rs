@@ -1,8 +1,9 @@
 use crate::compiler::Compiler;
 use crate::errors::{Severity, SourceError};
 use crate::parser::{AstNode, NodeId};
+use std::fmt::{Display, Formatter};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TypeId(pub usize);
 
 pub const UNIT_TYPE: TypeId = TypeId(0);
@@ -14,6 +15,24 @@ pub const BOOL_TYPE: TypeId = TypeId(5);
 pub const STRING_TYPE: TypeId = TypeId(6);
 
 pub const UNKNOWN_TYPE: TypeId = TypeId(usize::MAX);
+
+impl Display for TypeId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let msg = match *self {
+            UNIT_TYPE => "()",
+            ANY_TYPE => "any",
+            NOTHING_TYPE => "nothing",
+            INT_TYPE => "int",
+            FLOAT_TYPE => "float",
+            BOOL_TYPE => "bool",
+            STRING_TYPE => "string",
+            UNKNOWN_TYPE => "unknown",
+            _ => "invalid",
+        };
+
+        write!(f, "{}", msg)
+    }
+}
 
 pub struct Types {
     pub node_types: Vec<TypeId>,
@@ -55,6 +74,10 @@ impl<'a> Typechecker<'a> {
         let mut result = String::new();
 
         result.push_str("==== TYPES ====\n");
+
+        for (idx, node_type) in self.node_types.iter().enumerate() {
+            result.push_str(&format!("{}: {}\n", idx, node_type,));
+        }
 
         if !self.errors.is_empty() {
             result.push_str("==== TYPE ERRORS ====\n");
