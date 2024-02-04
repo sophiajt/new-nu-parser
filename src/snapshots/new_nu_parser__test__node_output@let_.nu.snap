@@ -12,4 +12,11 @@ input_file: tests/let_.nu
 ==== SCOPE ====
 0: Frame Scope, variables: [ x: NodeId(0) ], node_id: NodeId(4)
 ==== TYPES ====
+0: unknown
+1: unknown
+2: unknown
+3: any
+4: ()
+==== TYPE ERRORS ====
+Error (NodeId 2): unsupported ast node 'Let { variable_name: NodeId(0), ty: None, initializer: NodeId(1), is_mutable: false }' in typechecker
 

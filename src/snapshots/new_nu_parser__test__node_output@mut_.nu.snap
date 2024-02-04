@@ -20,4 +20,20 @@ input_file: tests/mut_.nu
 ==== SCOPE ====
 0: Frame Scope, variables: [ x: NodeId(0) ], node_id: NodeId(12)
 ==== TYPES ====
+0: unknown
+1: unknown
+2: unknown
+3: unknown
+4: unknown
+5: unknown
+6: unknown
+7: unknown
+8: unknown
+9: unknown
+10: unknown
+11: unknown
+12: ()
+==== TYPE ERRORS ====
+Error (NodeId 4): unsupported ast node 'Let { variable_name: NodeId(0), ty: Some(NodeId(2)), initializer: NodeId(3), is_mutable: true }' in typechecker
+Error (NodeId 11): unsupported ast node 'BinaryOp { lhs: NodeId(5), op: NodeId(6), rhs: NodeId(10) }' in typechecker
 

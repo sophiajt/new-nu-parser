@@ -30,4 +30,27 @@ input_file: tests/if_.nu
 2: Frame Scope, variables: [  ], node_id: NodeId(14)
 3: Frame Scope, variables: [  ], node_id: NodeId(16)
 ==== TYPES ====
+0: unknown
+1: unknown
+2: unknown
+3: unknown
+4: unknown
+5: unknown
+6: unknown
+7: unknown
+8: unknown
+9: unknown
+10: unknown
+11: unknown
+12: unknown
+13: unknown
+14: unknown
+15: unknown
+16: unknown
+17: unknown
+18: unknown
+19: ()
+==== TYPE ERRORS ====
+Error (NodeId 2): unsupported ast node 'Let { variable_name: NodeId(0), ty: None, initializer: NodeId(1), is_mutable: false }' in typechecker
+Error (NodeId 18): unsupported ast node 'If { condition: NodeId(6), then_block: NodeId(8), else_block: Some(NodeId(17)) }' in typechecker
 
