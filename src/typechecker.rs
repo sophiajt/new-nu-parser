@@ -14,6 +14,7 @@ pub const INT_TYPE: TypeId = TypeId(3);
 pub const FLOAT_TYPE: TypeId = TypeId(4);
 pub const BOOL_TYPE: TypeId = TypeId(5);
 pub const STRING_TYPE: TypeId = TypeId(6);
+pub const CLOSURE_TYPE: TypeId = TypeId(7);
 
 pub const UNKNOWN_TYPE: TypeId = TypeId(usize::MAX);
 
@@ -27,6 +28,7 @@ impl Display for TypeId {
             FLOAT_TYPE => "float",
             BOOL_TYPE => "bool",
             STRING_TYPE => "string",
+            CLOSURE_TYPE => "closure",
             UNKNOWN_TYPE => "unknown",
             _ => "invalid",
         };
@@ -142,6 +144,8 @@ impl<'a> Typechecker<'a> {
                 for inner_node_id in &block.nodes {
                     self.typecheck_node(*inner_node_id);
                 }
+
+                self.node_types[node_id.0] = UNIT_TYPE;
             }
             AstNode::Closure { params, block } => {
                 if let Some(params_node_id) = params {
@@ -149,6 +153,8 @@ impl<'a> Typechecker<'a> {
                 }
 
                 self.typecheck_node(block);
+
+                self.node_types[node_id.0] = CLOSURE_TYPE;
             }
             _ => self.error(
                 format!(
@@ -186,7 +192,7 @@ impl<'a> Typechecker<'a> {
             // }
             b"bool" => BOOL_TYPE,
             // b"cell-path" => SyntaxShape::CellPath,
-            // b"closure" => SyntaxShape::Closure(None), //FIXME: Blocks should have known output types
+            b"closure" => CLOSURE_TYPE, //FIXME: Closures should have known output types
             // b"datetime" => SyntaxShape::DateTime,
             // b"directory" => SyntaxShape::Directory,
             // b"duration" => SyntaxShape::Duration,

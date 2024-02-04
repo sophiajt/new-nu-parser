@@ -14,4 +14,13 @@ input_file: tests/literals.nu
 ==== SCOPE ====
 0: Frame Scope, variables: [  ], node_id: NodeId(6)
 ==== TYPES ====
+0: unknown
+1: unknown
+2: unknown
+3: unknown
+4: unknown
+5: unknown
+6: ()
+==== TYPE ERRORS ====
+Error (NodeId 5): unsupported ast node 'List([NodeId(0), NodeId(1), NodeId(2), NodeId(3), NodeId(4)])' in typechecker
 
