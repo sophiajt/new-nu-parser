@@ -79,6 +79,7 @@ pub enum AstNode {
     SubtractAssignment,
     MultiplyAssignment,
     DivideAssignment,
+    // TODO: append assignment ++=
 
     // Statements
     Let {
