@@ -42,9 +42,9 @@ input_file: tests/for_break_continue.nu
 2: Frame Scope, variables: [  ], node_id: NodeId(13)
 3: Frame Scope, variables: [  ], node_id: NodeId(20)
 ==== TYPES ====
-0: unknown
-1: unknown
-2: unknown
+0: int
+1: int
+2: ()
 3: unknown
 4: unknown
 5: unknown
@@ -75,6 +75,5 @@ input_file: tests/for_break_continue.nu
 30: unknown
 31: ()
 ==== TYPE ERRORS ====
-Error (NodeId 2): unsupported ast node 'Let { variable_name: NodeId(0), ty: None, initializer: NodeId(1), is_mutable: true }' in typechecker
 Error (NodeId 30): unsupported ast node 'For { variable: NodeId(3), range: NodeId(7), block: NodeId(29) }' in typechecker
 

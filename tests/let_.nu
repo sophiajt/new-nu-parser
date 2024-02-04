@@ -1,3 +1,3 @@
-let x = 123
+let x: int = 123
 
 $x
