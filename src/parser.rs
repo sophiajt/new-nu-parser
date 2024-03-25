@@ -2430,5 +2430,5 @@ fn is_symbol(source: &[u8]) -> bool {
             return true;
         }
     }
-    return false;
+    false
 }
