@@ -13,3 +13,8 @@ path = "src/lib.rs"
 
 [dev-dependencies]
 insta = { version = "1.33.0", features = ["glob"] }
+divan = "0.1.14"
+
+[[bench]]
+name = "benchmarks"
+harness = false
