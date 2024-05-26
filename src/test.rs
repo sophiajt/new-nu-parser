@@ -8,7 +8,7 @@ fn evaluate_example(fname: &Path) -> String {
 
     // Homogenize line endings from CRLF to LF to make sure tests work both on Windows and Linux/macOS
     let contents = String::from_utf8(contents)
-        .unwrap()
+        .expect("File is not valid utf-8")
         .replace("\r\n", "\n")
         .as_bytes()
         .to_owned();
