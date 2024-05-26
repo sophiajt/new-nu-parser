@@ -6,6 +6,13 @@ fn evaluate_example(fname: &Path) -> String {
     let mut compiler = Compiler::new();
     let contents = std::fs::read(fname).expect("We only run tests found by glob");
 
+    // Homogenize line endings from CRLF to LF to make sure tests work both on Windows and Linux/macOS
+    let contents = String::from_utf8(contents)
+        .unwrap()
+        .replace("\r\n", "\n")
+        .as_bytes()
+        .to_owned();
+
     let span_offset = compiler.span_offset();
     compiler.add_file(&fname.to_string_lossy(), &contents);
 
