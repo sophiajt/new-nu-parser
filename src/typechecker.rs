@@ -174,7 +174,7 @@ impl<'a> Typechecker<'a> {
         }
     }
 
-    pub fn typecheck_let(
+    fn typecheck_let(
         &mut self,
         variable_name: NodeId,
         ty: Option<NodeId>,
