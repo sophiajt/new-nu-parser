@@ -164,6 +164,18 @@ impl<'a> Typechecker<'a> {
 
                 self.node_types[node_id.0] = self.variable_types[var_id.0];
             }
+            AstNode::If {
+                condition,
+                then_block,
+                else_block,
+            } => {
+                self.typecheck_node(condition);
+                self.typecheck_node(then_block);
+
+                if let Some(else_blk) = else_block {
+                    self.typecheck_node(else_blk);
+                }
+            }
             _ => self.error(
                 format!(
                     "unsupported ast node '{:?}' in typechecker",

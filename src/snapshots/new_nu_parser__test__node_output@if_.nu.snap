@@ -37,19 +37,19 @@ input_file: tests/if_.nu
 4: unknown
 5: unknown
 6: unknown
-7: unknown
-8: unknown
+7: int
+8: ()
 9: unknown
 10: unknown
 11: unknown
 12: unknown
-13: unknown
-14: unknown
-15: unknown
-16: unknown
+13: int
+14: ()
+15: int
+16: ()
 17: unknown
 18: unknown
 19: ()
 ==== TYPE ERRORS ====
-Error (NodeId 18): unsupported ast node 'If { condition: NodeId(6), then_block: NodeId(8), else_block: Some(NodeId(17)) }' in typechecker
-
+Error (NodeId 6): unsupported ast node 'BinaryOp { lhs: NodeId(3), op: NodeId(4), rhs: NodeId(5) }' in typechecker
+Error (NodeId 12): unsupported ast node 'BinaryOp { lhs: NodeId(9), op: NodeId(10), rhs: NodeId(11) }' in typechecker
