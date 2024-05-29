@@ -82,7 +82,7 @@ impl<'a> Typechecker<'a> {
         result.push_str("==== TYPES ====\n");
 
         for (idx, node_type) in self.node_types.iter().enumerate() {
-            result.push_str(&format!("{}: {}\n", idx, node_type,));
+            result.push_str(&format!("{}: {}\n", idx, node_type));
         }
 
         if !self.errors.is_empty() {
