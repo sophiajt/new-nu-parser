@@ -1,50 +1,52 @@
 use crate::compiler::Compiler;
 use crate::errors::{Severity, SourceError};
 use crate::parser::{AstNode, NodeId};
-use std::fmt::{Display, Formatter};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TypeId(pub usize);
 
-/// Unit type signifies "no type". For example, statemenets like let x = ... do not have any type.
-pub const UNIT_TYPE: TypeId = TypeId(0);
-pub const ANY_TYPE: TypeId = TypeId(1);
-pub const NOTHING_TYPE: TypeId = TypeId(2);
-pub const INT_TYPE: TypeId = TypeId(3);
-pub const FLOAT_TYPE: TypeId = TypeId(4);
-pub const BOOL_TYPE: TypeId = TypeId(5);
-pub const STRING_TYPE: TypeId = TypeId(6);
-pub const CLOSURE_TYPE: TypeId = TypeId(7);
-
-pub const UNKNOWN_TYPE: TypeId = TypeId(usize::MAX);
-
-impl Display for TypeId {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let msg = match *self {
-            UNIT_TYPE => "()",
-            ANY_TYPE => "any",
-            NOTHING_TYPE => "nothing",
-            INT_TYPE => "int",
-            FLOAT_TYPE => "float",
-            BOOL_TYPE => "bool",
-            STRING_TYPE => "string",
-            CLOSURE_TYPE => "closure",
-            UNKNOWN_TYPE => "unknown",
-            _ => "invalid",
-        };
-
-        write!(f, "{}", msg)
-    }
+pub enum Type {
+    Unknown,
+    /// Unit type signifies "no type". For example, statemenets like let x = ... do not have any type.
+    Unit,
+    Any,
+    Number,
+    Nothing,
+    Int,
+    Float,
+    Bool,
+    String,
+    Block,
+    Closure,
+    List(TypeId),
 }
 
 pub struct Types {
+    pub types: Vec<Type>,
     pub node_types: Vec<TypeId>,
     pub errors: Vec<SourceError>,
 }
 
+// The below are predefined simple types hardcoded into the Typechecker to avoid re-adding them all over
+pub const UNKNOWN_TYPE: TypeId = TypeId(0);
+pub const UNIT_TYPE: TypeId = TypeId(1);
+pub const ANY_TYPE: TypeId = TypeId(2);
+pub const NUMBER_TYPE: TypeId = TypeId(3);
+pub const NOTHING_TYPE: TypeId = TypeId(4);
+pub const INT_TYPE: TypeId = TypeId(5);
+pub const FLOAT_TYPE: TypeId = TypeId(6);
+pub const BOOL_TYPE: TypeId = TypeId(7);
+pub const STRING_TYPE: TypeId = TypeId(8);
+pub const BLOCK_TYPE: TypeId = TypeId(9);
+pub const CLOSURE_TYPE: TypeId = TypeId(10);
+pub const LIST_ANY_TYPE: TypeId = TypeId(11);
+
 pub struct Typechecker<'a> {
-    // Immutable reference to a compiler after the name binding pass
+    /// Immutable reference to a compiler after the name binding pass
     compiler: &'a Compiler,
+
+    /// Types referenced by TypeId
+    types: Vec<Type>,
 
     /// Types of nodes. Each type in this vector matches a node in compiler.ast_nodes at the same position.
     pub node_types: Vec<TypeId>,
@@ -58,6 +60,21 @@ impl<'a> Typechecker<'a> {
     pub fn new(compiler: &'a Compiler) -> Self {
         Self {
             compiler,
+            types: vec![
+                // The order must be the same as with the xxx_TYPE constants above
+                Type::Unknown,
+                Type::Unit,
+                Type::Any,
+                Type::Number,
+                Type::Nothing,
+                Type::Int,
+                Type::Float,
+                Type::Bool,
+                Type::String,
+                Type::Block,
+                Type::Closure,
+                Type::List(ANY_TYPE),
+            ],
             node_types: vec![UNKNOWN_TYPE; compiler.ast_nodes.len()],
             variable_types: vec![UNKNOWN_TYPE; compiler.variables.len()],
             errors: vec![],
@@ -66,6 +83,7 @@ impl<'a> Typechecker<'a> {
 
     pub fn to_types(self) -> Types {
         Types {
+            types: self.types,
             node_types: self.node_types,
             errors: self.errors,
         }
@@ -81,8 +99,12 @@ impl<'a> Typechecker<'a> {
 
         result.push_str("==== TYPES ====\n");
 
-        for (idx, node_type) in self.node_types.iter().enumerate() {
-            result.push_str(&format!("{}: {}\n", idx, node_type));
+        for (idx, node_type_id) in self.node_types.iter().enumerate() {
+            result.push_str(&format!(
+                "{}: {}\n",
+                idx,
+                self.type_to_string(*node_type_id)
+            ));
         }
 
         if !self.errors.is_empty() {
@@ -130,6 +152,38 @@ impl<'a> Typechecker<'a> {
             } => {
                 // TODO: Add support for compound and optional types
                 self.node_types[node_id.0] = self.name_to_type(name);
+            }
+            AstNode::List(ref items) => {
+                if let Some(first_id) = items.first() {
+                    self.typecheck_node(*first_id);
+                    let first_type_id = self.node_types[first_id.0];
+
+                    let mut all_numbers = self.is_type_compatible(first_type_id, NUMBER_TYPE);
+                    let mut all_same = true;
+
+                    for item_id in items.iter().skip(1) {
+                        self.typecheck_node(*item_id);
+                        let item_type_id = self.node_types[item_id.0];
+
+                        if all_numbers && !self.is_type_compatible(item_type_id, NUMBER_TYPE) {
+                            all_numbers = false;
+                        }
+
+                        if all_same && item_type_id != first_type_id {
+                            all_same = false;
+                        }
+                    }
+
+                    if all_same {
+                        self.node_types[node_id.0] = self.push_type(Type::List(first_type_id));
+                    } else if all_numbers {
+                        self.node_types[node_id.0] = self.push_type(Type::List(NUMBER_TYPE));
+                    } else {
+                        self.node_types[node_id.0] = self.push_type(Type::List(ANY_TYPE));
+                    }
+                } else {
+                    self.node_types[node_id.0] = LIST_ANY_TYPE;
+                }
             }
             AstNode::Block(block_id) => {
                 let block = &self.compiler.blocks[block_id.0];
@@ -184,6 +238,11 @@ impl<'a> Typechecker<'a> {
                 node_id,
             ),
         }
+    }
+
+    fn push_type(&mut self, ty: Type) -> TypeId {
+        self.types.push(ty);
+        TypeId(self.types.len() - 1)
     }
 
     fn typecheck_let(
@@ -246,6 +305,7 @@ impl<'a> Typechecker<'a> {
             //     });
             //     SyntaxShape::Any
             // }
+            b"list" => LIST_ANY_TYPE, // TODO: List subtypes
             b"bool" => BOOL_TYPE,
             // b"cell-path" => SyntaxShape::CellPath,
             b"closure" => CLOSURE_TYPE, //FIXME: Closures should have known output types
@@ -259,7 +319,7 @@ impl<'a> Typechecker<'a> {
             b"int" => INT_TYPE,
             // _ if bytes.starts_with(b"list") => parse_list_shape(working_set, bytes, span, use_loc),
             b"nothing" => NOTHING_TYPE,
-            // b"number" => SyntaxShape::Number,
+            b"number" => NUMBER_TYPE,
             // b"path" => SyntaxShape::Filepath,
             // b"range" => SyntaxShape::Range,
             // _ if bytes.starts_with(b"record") => {
@@ -277,6 +337,48 @@ impl<'a> Typechecker<'a> {
                 UNKNOWN_TYPE
                 // }
             }
+        }
+    }
+
+    pub fn type_to_string(&self, type_id: TypeId) -> String {
+        let ty = &self.types[type_id.0];
+
+        match ty {
+            Type::Unknown => "unknown".to_string(),
+            Type::Unit => "()".to_string(),
+            Type::Any => "any".to_string(),
+            Type::Number => "number".to_string(),
+            Type::Nothing => "nothing".to_string(),
+            Type::Int => "int".to_string(),
+            Type::Float => "float".to_string(),
+            Type::Bool => "bool".to_string(),
+            Type::String => "string".to_string(),
+            Type::Block => "block".to_string(),
+            Type::Closure => "closure".to_string(),
+            Type::List(subtype_id) => {
+                format!("list<{}>", self.type_to_string(*subtype_id))
+            }
+        }
+    }
+
+    #[allow(clippy::match_like_matches_macro)]
+    pub fn is_type_compatible(&self, lhs: TypeId, rhs: TypeId) -> bool {
+        match (lhs, rhs) {
+            (NOTHING_TYPE, NOTHING_TYPE) => true,
+            (INT_TYPE, NUMBER_TYPE) => true,
+            (INT_TYPE, INT_TYPE) => true,
+            (FLOAT_TYPE, NUMBER_TYPE) => true,
+            (FLOAT_TYPE, FLOAT_TYPE) => true,
+            (BOOL_TYPE, BOOL_TYPE) => true,
+            (STRING_TYPE, STRING_TYPE) => true,
+            (BLOCK_TYPE, BLOCK_TYPE) => true,
+            (CLOSURE_TYPE, CLOSURE_TYPE) => true,
+            (NUMBER_TYPE, NUMBER_TYPE) => true,
+            (NUMBER_TYPE, INT_TYPE) => true,
+            (NUMBER_TYPE, FLOAT_TYPE) => true,
+            (ANY_TYPE, _) => true,
+            (_, ANY_TYPE) => true,
+            _ => false,
         }
     }
 }
